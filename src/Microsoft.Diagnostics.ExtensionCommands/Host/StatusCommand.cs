@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IContextService ContextService { get; }
 
-        [Option(Name = "--reset", Aliases = new[] { "-reset" }, Help = "Resets the internal cached state.")]
+        [Option<bool>(Name = "--reset", Aliases = new[] { "-reset" }, Help = "Resets the internal cached state.")]
         public bool Reset { get; set; }
 
         public override void Invoke()

@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public SOSHost SOSHost { get; }
 
-        [Argument(Name = "command_and_arguments", Help = "SOS command and arguments.")]
+        [Argument<string[]>(Name = "command_and_arguments", Help = "SOS command and arguments.")]
         public string[] Arguments { get; set; }
 
         public override void Invoke()

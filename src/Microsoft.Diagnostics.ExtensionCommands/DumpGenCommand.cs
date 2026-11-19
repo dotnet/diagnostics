@@ -21,13 +21,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private const string methodTableHeader32bits = " Address       MT     Size";
         private const string methodTableHeader64bits = "         Address               MT     Size";
 
-        [Argument(Name = "generation", Help = "The GC generation to get heap data from.")]
+        [Argument<string>(Name = "generation", Help = "The GC generation to get heap data from.")]
         public string Generation { get; set; }
 
-        [Option(Name = "-type", Help = "List only those objects whose type name is a substring match of the provided string.")]
+        [Option<string>(Name = "-type", Help = "List only those objects whose type name is a substring match of the provided string.")]
         public string FilterByTypeName { get; set; }
 
-        [Option(Name = "-mt", Help = "The address pointing on a Method table.")]
+        [Option<string>(Name = "-mt", Help = "The address pointing on a Method table.")]
         public string MethodTableAddress { get; set; }
 
         public override void Invoke()

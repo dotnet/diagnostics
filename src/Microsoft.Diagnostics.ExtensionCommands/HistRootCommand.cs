@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public GCHistory History { get; }
 
-        [Argument(Name = "root", Help = "The root address to track (as reported by HistObjFind).")]
+        [Argument<string>(Name = "root", Help = "The root address to track (as reported by HistObjFind).")]
         public string RootAddress { get; set; }
 
         public override void Invoke()

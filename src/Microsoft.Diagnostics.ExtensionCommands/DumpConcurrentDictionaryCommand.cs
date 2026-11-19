@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Runtime = runtime;
         }
 
-        [Argument(Help = "The address of a ConcurrentDictionary object.")]
+        [Argument<string>(Help = "The address of a ConcurrentDictionary object.")]
         public string Address { get; set; }
 
         public ClrRuntime Runtime { get; }

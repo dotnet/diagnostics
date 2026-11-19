@@ -94,7 +94,7 @@ namespace SOS.Hosting
         {
         }
 
-        [Argument(Name = "arguments", Help = "Arguments to SOS command.")]
+        [Argument<string[]>(Name = "arguments", Help = "Arguments to SOS command.")]
         public string[] Arguments { get; set; }
 
         public SOSHost SOSHost { get; }

@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Runtime = runtime;
         }
 
-        [Argument(Help = "The address of a ConcurrentQueue object.")]
+        [Argument<string>(Help = "The address of a ConcurrentQueue object.")]
         public string Address { get; set; }
 
         public ClrRuntime Runtime { get; }

@@ -18,10 +18,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public RootCacheService RootCache { get; }
 
-        [Argument(Name = "source")]
+        [Argument<string>(Name = "source")]
         public string SourceAddress { get; set; }
 
-        [Argument(Name = "target")]
+        [Argument<string>(Name = "target")]
         public string TargetAddress { get; set; }
 
         public override void Invoke()

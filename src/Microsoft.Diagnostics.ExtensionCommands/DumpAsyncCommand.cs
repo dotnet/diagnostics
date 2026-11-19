@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private const string DmlCommandInvoke = $"!{CommandName}";
 
         /// <summary>Gets whether to only show stacks that include the object with the specified address.</summary>
-        [Option(Name = "--address", Aliases = new string[] { "-addr" }, Help = "Only show stacks that include the object with the specified address.")]
+        [Option<string>(Name = "--address", Aliases = new string[] { "-addr" }, Help = "Only show stacks that include the object with the specified address.")]
         public string? ObjectAddress
         {
             get => _objectAddress?.ToString();
@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private ulong? _objectAddress;
 
         /// <summary>Gets whether to only show stacks that include objects with the specified method table.</summary>
-        [Option(Name = "--methodtable", Aliases = new string[] { "-mt" }, Help = "Only show stacks that include objects with the specified method table.")]
+        [Option<string>(Name = "--methodtable", Aliases = new string[] { "-mt" }, Help = "Only show stacks that include objects with the specified method table.")]
         public string? MethodTableAddress
         {
             get => _methodTableAddress?.ToString();
@@ -49,27 +49,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private ulong? _methodTableAddress;
 
         /// <summary>Gets whether to only show stacks that include objects whose type includes the specified name in its name.</summary>
-        [Option(Name = "--type", Help = "Only show stacks that include objects whose type includes the specified name in its name.")]
+        [Option<string>(Name = "--type", Help = "Only show stacks that include objects whose type includes the specified name in its name.")]
         public string? NameSubstring { get; set; }
 
         /// <summary>Gets whether to include stacks that contain only non-state machine task objects.</summary>
-        [Option(Name = "--tasks", Aliases = new string[] { "-t" }, Help = "Include stacks that contain only non-state machine task objects.")]
+        [Option<bool>(Name = "--tasks", Aliases = new string[] { "-t" }, Help = "Include stacks that contain only non-state machine task objects.")]
         public bool IncludeTasks { get; set; }
 
         /// <summary>Gets whether to include completed tasks in stacks.</summary>
-        [Option(Name = "--completed", Aliases = new string[] { "-c" }, Help = "Include completed tasks in stacks.")]
+        [Option<bool>(Name = "--completed", Aliases = new string[] { "-c" }, Help = "Include completed tasks in stacks.")]
         public bool IncludeCompleted { get; set; }
 
         /// <summary>Gets whether to show state machine fields for every async stack frame that has them.</summary>
-        [Option(Name = "--fields", Aliases = new string[] { "-f" }, Help = "Show state machine fields for every async stack frame that has them.")]
+        [Option<bool>(Name = "--fields", Aliases = new string[] { "-f" }, Help = "Show state machine fields for every async stack frame that has them.")]
         public bool DisplayFields { get; set; }
 
         /// <summary>Gets whether to summarize all async frames found rather than showing detailed stacks.</summary>
-        [Option(Name = "--stats", Help = "Summarize all async frames found rather than showing detailed stacks.")]
+        [Option<bool>(Name = "--stats", Help = "Summarize all async frames found rather than showing detailed stacks.")]
         public bool Summarize { get; set; }
 
         /// <summary>Gets whether to coalesce stacks and portions of stacks that are the same.</summary>
-        [Option(Name = "--coalesce", Help = "Coalesce stacks and portions of stacks that are the same.")]
+        [Option<bool>(Name = "--coalesce", Help = "Coalesce stacks and portions of stacks that are the same.")]
         public bool CoalesceStacks { get; set; }
 
         /// <summary>Invokes the command.</summary>

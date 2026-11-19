@@ -32,23 +32,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private static readonly string[] s_uriStringFieldNames =["_string", "m_String"];
 
         /// <summary>Gets whether to summarize all httpRequests found rather than showing detailed info.</summary>
-        [Option(Name = "--stats", Help = "Summarize all HTTP requests found rather than showing detailed info.")]
+        [Option<bool>(Name = "--stats", Help = "Summarize all HTTP requests found rather than showing detailed info.")]
         public bool Summarize { get; set; }
 
         /// <summary>Gets whether to show only requests without response.</summary>
-        [Option(Name = "--pending", Help = "Show only requests without response")]
+        [Option<bool>(Name = "--pending", Help = "Show only requests without response")]
         public bool Pending { get; set; }
 
         /// <summary>Gets whether to show only requests with response.</summary>
-        [Option(Name = "--completed", Help = "Show only requests with response")]
+        [Option<bool>(Name = "--completed", Help = "Show only requests with response")]
         public bool Completed { get; set; }
 
         /// <summary>Gets whether to show only requests with with specified request uri.</summary>
-        [Option(Name = "--uri", Help = "Show only requests with with specified request uri")]
+        [Option<string>(Name = "--uri", Help = "Show only requests with with specified request uri")]
         public string? Uri { get; set; }
 
         /// <summary>Gets whether to show only requests with with specified response status codei.</summary>
-        [Option(Name = "--statuscode", Help = "Show only requests with with specified response status code")]
+        [Option<int?>(Name = "--statuscode", Help = "Show only requests with with specified response status code")]
         public int? StatusCode { get; set; }
 
         private HeapWithFilters? FilteredHeap { get; set; }

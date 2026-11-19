@@ -26,57 +26,57 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public DumpHeapService DumpHeap { get; }
 
-        [Option(Name = "-mt")]
+        [Option<string>(Name = "-mt")]
         public string MethodTableString { get; set; }
 
         private ulong? MethodTable { get; set; }
 
-        [Option(Name = "-type")]
+        [Option<string>(Name = "-type")]
         public string Type { get; set; }
 
-        [Option(Name = "-stat")]
+        [Option<bool>(Name = "-stat")]
         public bool StatOnly { get; set; }
 
-        [Option(Name = "-strings")]
+        [Option<bool>(Name = "-strings")]
         public bool Strings { get; set; }
 
-        [Option(Name = "-short")]
+        [Option<bool>(Name = "-short")]
         public bool Short { get; set; }
 
-        [Option(Name = "-min")]
+        [Option<ulong>(Name = "-min")]
         public ulong Min { get; set; }
 
-        [Option(Name = "-max")]
+        [Option<ulong>(Name = "-max")]
         public ulong Max { get; set; }
 
-        [Option(Name = "-live")]
+        [Option<bool>(Name = "-live")]
         public bool Live { get; set; }
 
-        [Option(Name = "-dead")]
+        [Option<bool>(Name = "-dead")]
         public bool Dead{ get; set; }
 
-        [Option(Name = "-heap")]
+        [Option<int>(Name = "-heap")]
         public int GCHeap { get; set; } = -1;
 
-        [Option(Name = "-segment")]
+        [Option<string>(Name = "-segment")]
         public string Segment { get; set; }
 
-        [Option(Name = "-thinlock")]
+        [Option<bool>(Name = "-thinlock")]
         public bool ThinLock { get; set; }
 
-        [Option(Name = "-bycount", Help = "Sort the statistics table by object count instead of total size.")]
+        [Option<bool>(Name = "-bycount", Help = "Sort the statistics table by object count instead of total size.")]
         public bool SortByCount { get; set; }
 
-        [Option(Name = "-gen")]
+        [Option<string>(Name = "-gen")]
         public string Generation { get; set; }
 
-        [Option(Name = "-ignoreGCState", Help = "Ignore the GC's marker that the heap is not walkable (will generate lots of false positive errors).")]
+        [Option<bool>(Name = "-ignoreGCState", Help = "Ignore the GC's marker that the heap is not walkable (will generate lots of false positive errors).")]
         public bool IgnoreGCState { get; set; }
 
-        [Option(Name = "-noprogress", Help = "Suppress periodic progress output during heap scanning.")]
+        [Option<bool>(Name = "-noprogress", Help = "Suppress periodic progress output during heap scanning.")]
         public bool NoProgress { get; set; }
 
-        [Argument(Help = "Optional memory ranges in the form of: [Start [End]]")]
+        [Argument<string[]>(Help = "Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
         private HeapWithFilters FilteredHeap { get; set; }
