@@ -269,7 +269,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// This groups like commands that may have the same name as another group or the default one.
         /// </summary>
-        private sealed class CommandGroup
+        private sealed class CommandGroup : ICommandValueFactory
         {
             private Command _rootCommand;
             private readonly Dictionary<string, CommandHandler> _commandHandlers = new();
@@ -397,9 +397,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         ArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
 
-                        Argument argument = (Argument)typeof(Argument<>).MakeGenericType(property.PropertyType)
-                            .GetConstructor([typeof(string)])
-                            .Invoke([argumentAttribute.Name ?? property.Name.ToLowerInvariant()]);
+                        Argument argument = (Argument)argumentAttribute.Create(
+                            this,
+                            property.PropertyType,
+                            argumentAttribute.Name ?? property.Name.ToLowerInvariant());
 
                         argument.Description = argumentAttribute.Help;
                         argument.Arity = arity;
@@ -412,9 +413,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         OptionAttribute optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
                         if (optionAttribute != null)
                         {
-                            Option option = (Option)typeof(Option<>).MakeGenericType(property.PropertyType)
-                                .GetConstructor([typeof(string), typeof(string[])])
-                                .Invoke([optionAttribute.Name ?? BuildOptionAlias(property.Name), optionAttribute.Aliases]);
+                            Option option = (Option)optionAttribute.Create(
+                                this,
+                                property.PropertyType,
+                                optionAttribute.Name ?? BuildOptionAlias(property.Name));
 
                             option.Description = optionAttribute.Help;
 
@@ -431,6 +433,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
                 // Build or re-build parser instance after this command is added
             }
+
+            object ICommandValueFactory.CreateArgument<T>(string name) => new Argument<T>(name);
+
+            object ICommandValueFactory.CreateOption<T>(string name, string[] aliases) => new Option<T>(name, aliases);
 
             internal string GetDetailedHelp(Command command, IServiceProvider services, int windowWidth)
             {

@@ -21,10 +21,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
         }
 
-        [Argument(Name = "filename", Help = "The file to write the stress log to. Defaults to StressLog.txt in the current directory.")]
+        [Argument<string>(Name = "filename", Help = "The file to write the stress log to. Defaults to StressLog.txt in the current directory.")]
         public string FileName { get; set; }
 
-        [Option(Name = "-addr", Help = "The hex address of a StressLog to dump instead of the runtime's own stress log.")]
+        [Option<string>(Name = "-addr", Help = "The hex address of a StressLog to dump instead of the runtime's own stress log.")]
         public string AddressString { get; set; }
 
         // The sentinel ClrMD's stress-log reader emits for a message whose format

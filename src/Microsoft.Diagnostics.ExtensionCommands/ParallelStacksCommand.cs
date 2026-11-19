@@ -19,10 +19,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public ClrRuntime Runtime { get; }
 
-        [Option(Name = "--allthreads", Aliases = new string[] { "-a" }, Help = "Displays all threads per group instead of at most 4 by default.")]
+        [Option<bool>(Name = "--allthreads", Aliases = new string[] { "-a" }, Help = "Displays all threads per group instead of at most 4 by default.")]
         public bool AllThreads { get; set; }
 
-        [Option(Name = "--runtime", Aliases = new string[] { "-r" }, Help = "Displays runtime stacks in addition to managed ones.")]
+        [Option<bool>(Name = "--runtime", Aliases = new string[] { "-r" }, Help = "Displays runtime stacks in addition to managed ones.")]
         public bool IncludeRuntimeStacks { get; set; }
 
         public override void Invoke()

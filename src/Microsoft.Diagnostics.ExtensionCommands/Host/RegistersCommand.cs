@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IThread CurrentThread { get; }
 
-        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
+        [Option<bool>(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
 
         public override void Invoke()

@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IMemoryService MemoryService { get; }
 
-        [Argument]
+        [Argument<string>]
         public string Command { get; set; }
 
         public override void Invoke()

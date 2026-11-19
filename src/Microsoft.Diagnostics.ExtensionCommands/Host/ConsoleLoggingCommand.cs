@@ -18,10 +18,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IConsoleFileLoggingService FileLoggingService { get; }
 
-        [Argument(Name = "path", Help = "Log file path.")]
+        [Argument<string>(Name = "path", Help = "Log file path.")]
         public string FilePath { get; set; }
 
-        [Option(Name = "--disable", Help = "Disable console file logging.")]
+        [Option<bool>(Name = "--disable", Help = "Disable console file logging.")]
         public bool Disable { get; set; }
 
         public override void Invoke()

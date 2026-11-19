@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IMemoryService Memory { get; }
 
-        [Argument(Name = "objectaddress", Help = "The object to verify.")]
+        [Argument<string>(Name = "objectaddress", Help = "The object to verify.")]
         public string ObjectAddress { get; set; }
 
         public override void Invoke()

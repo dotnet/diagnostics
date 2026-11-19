@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private readonly StringBuilderPool _stringBuilderPool = new(260);
 
-        [Argument(Name = "object")]
+        [Argument<string>(Name = "object")]
         public string ObjectAddress { get; set; }
 
         public override void Invoke()

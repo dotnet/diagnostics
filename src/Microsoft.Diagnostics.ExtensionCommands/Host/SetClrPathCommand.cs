@@ -19,10 +19,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IRuntime Runtime { get; }
 
-        [Argument(Name = "path", Help = "Runtime directory path.")]
+        [Argument<string>(Name = "path", Help = "Runtime directory path.")]
         public string Argument { get; set; }
 
-        [Option(Name = "--clear", Aliases = new string[] { "-c" }, Help = "Clears the runtime directory path.")]
+        [Option<bool>(Name = "--clear", Aliases = new string[] { "-c" }, Help = "Clears the runtime directory path.")]
         public bool Clear { get; set; }
 
         public override void Invoke()

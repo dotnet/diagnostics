@@ -38,31 +38,31 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IModuleService ModuleService { get; }
 
-        [Argument(Help = "Switch to the runtime by id.")]
+        [Argument<int?>(Help = "Switch to the runtime by id.")]
         public int? Id { get; set; }
 
-        [Option(Name = "--netfx", Aliases = new string[] { "-netfx", "-f" }, Help = "Switches to the desktop .NET Framework if exists.")]
+        [Option<bool>(Name = "--netfx", Aliases = new string[] { "-netfx", "-f" }, Help = "Switches to the desktop .NET Framework if exists.")]
         public bool NetFx { get; set; }
 
-        [Option(Name = "--netcore", Aliases = new string[] { "-netcore", "-c" }, Help = "Switches to the .NET Core or .NET 5+ runtime if exists.")]
+        [Option<bool>(Name = "--netcore", Aliases = new string[] { "-netcore", "-c" }, Help = "Switches to the .NET Core or .NET 5+ runtime if exists.")]
         public bool NetCore { get; set; }
 
-        [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Forces all runtimes to be enumerated.")]
+        [Option<bool>(Name = "--all", Aliases = new string[] { "-a" }, Help = "Forces all runtimes to be enumerated.")]
         public bool All { get; set; }
 
-        [Option(Name = "--module", Help = "Tries the named module first, stopping on a match unless --all is specified.")]
+        [Option<string>(Name = "--module", Help = "Tries the named module first, stopping on a match unless --all is specified.")]
         public string ModuleName { get; set; }
 
-        [Option(Name = "--address", Help = "Tries the module at the hexadecimal base address first, stopping on a match unless --all is specified.")]
+        [Option<string>(Name = "--address", Help = "Tries the module at the hexadecimal base address first, stopping on a match unless --all is specified.")]
         public string ModuleAddress { get; set; }
 
-        [Option(Name = "--clear-priority", Help = "Clears the preferred runtime module.")]
+        [Option<bool>(Name = "--clear-priority", Help = "Clears the preferred runtime module.")]
         public bool ClearPriority { get; set; }
 
-        [Option(Name = "--usecdac", Help = "Controls cDAC usage: true (required), false (disabled), prefer (allow DAC fallback).")]
+        [Option<string>(Name = "--usecdac", Help = "Controls cDAC usage: true (required), false (disabled), prefer (allow DAC fallback).")]
         public string UseCDac { get; set; }
 
-        [Option(Name = "--DacSignatureVerification", Aliases = new string[] { "-v" }, Help = "Enforce the proper DAC certificate signing when loaded (true/false).")]
+        [Option<bool?>(Name = "--DacSignatureVerification", Aliases = new string[] { "-v" }, Help = "Enforce the proper DAC certificate signing when loaded (true/false).")]
         public bool? DacSignatureVerification { get; set; }
 
         public override void Invoke()

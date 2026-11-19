@@ -23,10 +23,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public RootCacheService RootCache { get; }
 
-        [Option(Name = "-xml")]
+        [Option<bool>(Name = "-xml")]
         public bool Xml { get; set; }
 
-        [Argument(Name = "filename")]
+        [Argument<string>(Name = "filename")]
         public string Filename { get; set; }
 
         public override void Invoke()

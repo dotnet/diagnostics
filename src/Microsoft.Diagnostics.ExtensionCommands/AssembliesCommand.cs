@@ -20,10 +20,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IModuleService ModuleService { get; }
 
-        [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on assembly name (path not included).")]
+        [Option<string>(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on assembly name (path not included).")]
         public string AssemblyName { get; set; }
 
-        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays detailed information about the assemblies.")]
+        [Option<bool>(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays detailed information about the assemblies.")]
         public bool Verbose { get; set; }
 
         public override void Invoke()

@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
         }
 
-        [Argument(Name = "FileName", Help = "Test data file path.")]
+        [Argument<string>(Name = "FileName", Help = "Test data file path.")]
         public string FileName { get; set; }
 
         public override void Invoke()
