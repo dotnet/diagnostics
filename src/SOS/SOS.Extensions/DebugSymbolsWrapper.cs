@@ -18,11 +18,6 @@ namespace SOS.Extensions
         }
 
         // These IDebugSymbols slots include IUnknown and are inherited by IDebugSymbols5.
-        public HResult AddSymbolOptions(SYMOPT options)
-        {
-            return ((delegate* unmanaged[Stdcall]<IntPtr, SYMOPT, int>)VTable[4])(Self, options);
-        }
-
         public HResult GetModuleParameters(ulong imageBase, out DEBUG_MODULE_PARAMETERS parameters)
         {
             parameters = default;

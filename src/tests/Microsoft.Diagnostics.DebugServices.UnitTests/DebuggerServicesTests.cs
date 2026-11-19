@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Extensions;
@@ -122,6 +123,88 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Equal(0UL, displacement);
         }
 
+        [Fact]
+        public void DebugAdvancedWrapperUsesNativeVTableAndBalancesReferences()
+        {
+            TestDebugAdvanced advanced = new();
+            int finalReferenceCount = -1;
+            try
+            {
+                Assert.Equal(1, advanced.ReferenceCount);
+                // CallableCOMWrapper consumes the incoming reference after querying the requested interface.
+                Assert.Equal(2, advanced.AddRef());
+                using (DebugAdvancedWrapper wrapper = new(advanced.Interface))
+                {
+                    Assert.Equal(2, advanced.ReferenceCount);
+
+                    HResult hr = wrapper.GetSymbolInformation(
+                        DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE,
+                        SymbolAddress,
+                        10,
+                        null,
+                        out int infoSize);
+                    Assert.Equal(HResult.S_FALSE, (int)hr);
+                    Assert.Equal(advanced.SymbolBytes.Length, infoSize);
+
+                    byte[] buffer = new byte[infoSize];
+                    hr = wrapper.GetSymbolInformation(
+                        DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE,
+                        SymbolAddress,
+                        10,
+                        buffer,
+                        out infoSize);
+                    Assert.Equal(HResult.S_OK, (int)hr);
+                    Assert.Equal(advanced.SymbolBytes.Length, infoSize);
+                    Assert.Equal(advanced.SymbolBytes, buffer);
+                    Assert.Equal(new[] { 0, buffer.Length }, advanced.BufferSizes);
+                    Assert.Equal(DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE, advanced.Which);
+                    Assert.Equal(SymbolAddress, advanced.Arg64);
+                    Assert.Equal(10U, advanced.Arg32);
+                    Assert.True(advanced.StringBufferWasNull);
+                }
+                Assert.Equal(1, advanced.ReferenceCount);
+            }
+            finally
+            {
+                finalReferenceCount = advanced.Release();
+            }
+            Assert.Equal(0, finalReferenceCount);
+            Assert.True(advanced.Destroyed);
+        }
+
+        [Fact]
+        public void DebugSymbolsWrapperPreserves64BitDisplacementAndBalancesReferences()
+        {
+            TestDebugSymbols symbols = new();
+            int finalReferenceCount = -1;
+            try
+            {
+                Assert.Equal(1, symbols.ReferenceCount);
+                // CallableCOMWrapper consumes the incoming reference after querying the requested interface.
+                Assert.Equal(2, symbols.AddRef());
+                using (DebugSymbolsWrapper wrapper = new(symbols.Interface))
+                {
+                    Assert.Equal(2, symbols.ReferenceCount);
+
+                    HResult hr = wrapper.GetNameByOffsetWide(SymbolAddress, out ulong displacement);
+
+                    Assert.Equal(HResult.S_OK, (int)hr);
+                    Assert.Equal(TestDebugSymbols.Displacement, displacement);
+                    Assert.Equal(SymbolAddress, symbols.Offset);
+                    Assert.True(symbols.NameBufferWasNull);
+                    Assert.Equal(0, symbols.NameBufferSize);
+                    Assert.True(symbols.NameSizeWasNull);
+                }
+                Assert.Equal(1, symbols.ReferenceCount);
+            }
+            finally
+            {
+                finalReferenceCount = symbols.Release();
+            }
+            Assert.Equal(0, finalReferenceCount);
+            Assert.True(symbols.Destroyed);
+        }
+
         private static DebuggerServices.IDebugAdvancedOperations CreateAdvanced(Func<ulong, string> getName, int nullTerminators = 2)
         {
             IDebugAdvanced2 proxy = CreateProxy<IDebugAdvanced2>((method, arguments) => {
@@ -199,6 +282,138 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             public HResult GetNameByOffsetWide(ulong offset, out ulong displacement) =>
                 _symbols.GetNameByOffsetWide(offset, null, 0, out _, out displacement);
+        }
+
+        private abstract class TestCOMObject : COMCallableIUnknown
+        {
+            public int ReferenceCount
+            {
+                get
+                {
+                    int count = AddRef();
+                    Release();
+                    return count - 1;
+                }
+            }
+
+            public bool Destroyed { get; private set; }
+
+            protected override void Destroy() => Destroyed = true;
+
+            [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+            protected delegate int UnusedDelegate(IntPtr self);
+
+            protected static int Unused(IntPtr self) => HResult.E_NOTIMPL;
+        }
+
+        private sealed class TestDebugAdvanced : TestCOMObject
+        {
+            public TestDebugAdvanced()
+            {
+                VTableBuilder builder = AddInterface(typeof(IDebugAdvanced2).GUID, validate: false);
+                for (int i = 0; i < 5; i++)
+                {
+                    builder.AddMethod(new UnusedDelegate(Unused));
+                }
+                builder.AddMethod(new GetSymbolInformationDelegate(GetSymbolInformation));
+                Interface = builder.Complete();
+                AddRef();
+            }
+
+            public IntPtr Interface { get; }
+            public byte[] SymbolBytes { get; } = Encoding.Unicode.GetBytes(PublicName + '\0');
+            public List<int> BufferSizes { get; } = new();
+            public DEBUG_SYMINFO Which { get; private set; }
+            public ulong Arg64 { get; private set; }
+            public uint Arg32 { get; private set; }
+            public bool StringBufferWasNull { get; private set; }
+
+            private int GetSymbolInformation(
+                IntPtr self,
+                DEBUG_SYMINFO which,
+                ulong arg64,
+                uint arg32,
+                IntPtr buffer,
+                int bufferSize,
+                IntPtr infoSize,
+                IntPtr stringBuffer,
+                int stringBufferSize,
+                IntPtr stringSize)
+            {
+                Which = which;
+                Arg64 = arg64;
+                Arg32 = arg32;
+                BufferSizes.Add(bufferSize);
+                StringBufferWasNull = stringBuffer == IntPtr.Zero && stringBufferSize == 0 && stringSize == IntPtr.Zero;
+                Marshal.WriteInt32(infoSize, SymbolBytes.Length);
+                if (buffer == IntPtr.Zero)
+                {
+                    return HResult.S_FALSE;
+                }
+                Marshal.Copy(SymbolBytes, 0, buffer, SymbolBytes.Length);
+                return HResult.S_OK;
+            }
+
+            [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+            private delegate int GetSymbolInformationDelegate(
+                IntPtr self,
+                DEBUG_SYMINFO which,
+                ulong arg64,
+                uint arg32,
+                IntPtr buffer,
+                int bufferSize,
+                IntPtr infoSize,
+                IntPtr stringBuffer,
+                int stringBufferSize,
+                IntPtr stringSize);
+        }
+
+        private sealed class TestDebugSymbols : TestCOMObject
+        {
+            public const ulong Displacement = 0x1_0000_0035;
+
+            public TestDebugSymbols()
+            {
+                VTableBuilder builder = AddInterface(typeof(IDebugSymbols5).GUID, validate: false);
+                for (int i = 0; i < 57; i++)
+                {
+                    builder.AddMethod(new UnusedDelegate(Unused));
+                }
+                builder.AddMethod(new GetNameByOffsetWideDelegate(GetNameByOffsetWide));
+                Interface = builder.Complete();
+                AddRef();
+            }
+
+            public IntPtr Interface { get; }
+            public ulong Offset { get; private set; }
+            public bool NameBufferWasNull { get; private set; }
+            public int NameBufferSize { get; private set; }
+            public bool NameSizeWasNull { get; private set; }
+
+            private int GetNameByOffsetWide(
+                IntPtr self,
+                ulong offset,
+                IntPtr nameBuffer,
+                int nameBufferSize,
+                IntPtr nameSize,
+                IntPtr displacement)
+            {
+                Offset = offset;
+                NameBufferWasNull = nameBuffer == IntPtr.Zero;
+                NameBufferSize = nameBufferSize;
+                NameSizeWasNull = nameSize == IntPtr.Zero;
+                Marshal.WriteInt64(displacement, unchecked((long)Displacement));
+                return HResult.S_OK;
+            }
+
+            [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+            private delegate int GetNameByOffsetWideDelegate(
+                IntPtr self,
+                ulong offset,
+                IntPtr nameBuffer,
+                int nameBufferSize,
+                IntPtr nameSize,
+                IntPtr displacement);
         }
     }
 }
