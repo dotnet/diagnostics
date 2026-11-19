@@ -167,15 +167,19 @@ jobs:
             targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
             artifactName: Build_$(_PhaseName)
 
-    # Publish the complete build outputs consumed by normal-test and SOS jobs.
+    # Publish the build outputs consumed by normal-test and SOS jobs.
     - ${{ if eq(parameters.testOnly, false) }}:
       - task: CopyFiles@2
         displayName: Gather test artifacts for publish
         inputs:
           SourceFolder: '$(Build.SourcesDirectory)/artifacts'
+          # Exclude loose self-contained publish intermediates, then re-include final debuggee
+          # bundles and RID-specific tool publish outputs.
           Contents: |
             bin/**
-            obj/**
+            !bin/**/${{ parameters.platform.rid }}/**
+            !!bin/**/${{ parameters.platform.rid }}/publish/**
+            !!bin/**/publish/${{ parameters.platform.rid }}/**
             test/**
           TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
 
