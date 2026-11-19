@@ -53,11 +53,23 @@ namespace SOS.Hosting {
         /// <summary>
         /// Create an instance of the hosting class. Has the lifetime of the target.
         /// </summary>
-        public SOSHost(IServiceProvider services)
+        public SOSHost(
+            ITarget target,
+            IMemoryService memoryService,
+            IConsoleService consoleService,
+            IContextService contextService,
+            IModuleService moduleService,
+            IThreadService threadService,
+            SOSLibrary sosLibrary,
+            INativeDebugger nativeDebugger = null)
         {
-            Target = services.GetRequiredService<ITarget>();
-            MemoryService = services.GetRequiredService<IMemoryService>();
-            INativeDebugger nativeDebugger = services.GetService<INativeDebugger>();
+            Target = target;
+            MemoryService = memoryService;
+            ConsoleService = consoleService;
+            ContextService = contextService;
+            ModuleService = moduleService;
+            ThreadService = threadService;
+            _sosLibrary = sosLibrary;
             _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
 
             // If running under a native debugger, use the client instance supplied by the debugger for commands
@@ -79,12 +91,6 @@ namespace SOS.Hosting {
                 }
             }
             Debug.Assert(_client != IntPtr.Zero);
-
-            ConsoleService = services.GetRequiredService<IConsoleService>();
-            ContextService = services.GetRequiredService<IContextService>();
-            ModuleService = services.GetRequiredService<IModuleService>();
-            ThreadService = services.GetRequiredService<IThreadService>();
-            _sosLibrary = services.GetRequiredService<SOSLibrary>();
         }
 
         void IDisposable.Dispose()

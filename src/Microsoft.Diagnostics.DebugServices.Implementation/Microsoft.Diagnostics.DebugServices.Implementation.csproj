@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Microsoft.Diagnostics.DebugServices\DynamicallyAccessedMembersAttribute.cs" Link="DynamicallyAccessedMembersAttribute.cs" />
+    <Compile Include="..\shared\Compatibility\DynamicallyAccessedMembersAttribute.cs" Link="Compatibility\DynamicallyAccessedMembersAttribute.cs" />
   </ItemGroup>
 
   <ItemGroup>

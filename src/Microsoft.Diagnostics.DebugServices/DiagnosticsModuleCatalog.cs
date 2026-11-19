@@ -13,7 +13,7 @@ namespace Microsoft.Diagnostics.DebugServices
     public static class DiagnosticsModuleCatalog
     {
         private static readonly object s_lock = new();
-        private static readonly Dictionary<Type, Func<IDiagnosticsModule>> s_factories = new();
+        private static readonly Dictionary<Type, Func<IDiagnosticsModule>> s_factories = [];
 
         /// <summary>
         /// Registers a factory without constructing the module.

@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// </summary>
     public class CommandService : ICommandService
     {
-        private readonly List<CommandGroup> _commandGroups = new();
+        private readonly List<CommandGroup> _commandGroups = [];
         private readonly string _commandPrompt;
 
         /// <summary>
