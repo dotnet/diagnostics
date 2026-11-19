@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+#if NET8_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
+#endif
 using System.Runtime.InteropServices;
 
 namespace SOS.Hosting.DbgEng.Interop
@@ -21,7 +23,9 @@ namespace SOS.Hosting.DbgEng.Interop
 
         public object Interface
         {
+#if NET8_0_OR_GREATER
             [RequiresDynamicCode("Built-in COM interop is not supported by NativeAOT.")]
+#endif
             get => _iface != null ? Marshal.GetObjectForIUnknown((IntPtr)_iface) : null;
         }
     }
