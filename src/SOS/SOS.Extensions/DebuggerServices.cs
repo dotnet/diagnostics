@@ -35,24 +35,40 @@ namespace SOS.Extensions
         private readonly HostType _hostType;
 
         /// <summary>
-        /// A pointer to the underlying IDebugClient interface if the host is DbgEng.
+        /// The native symbol interface if the host is DbgEng.
         /// </summary>
-        public IDebugClient5 DebugClient { get; }
+        public DebugSymbolsWrapper DebugSymbols { get; }
+
+        public DebugAdvancedWrapper DebugAdvanced { get; }
 
         internal DebuggerServices(IntPtr punk, HostType hostType)
             : base(IID_IDebuggerServices, punk)
         {
             _hostType = hostType;
 
-            // This uses COM marshalling code, so we also check that the OSPlatform is Windows.
             if (hostType == HostType.DbgEng && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                object obj = Marshal.GetObjectForIUnknown(punk);
-                if (obj is IDebugClient5 client)
+                IntPtr symbols = QueryInterface(typeof(IDebugSymbols5).GUID);
+                if (symbols != IntPtr.Zero)
                 {
-                    DebugClient = client;
+                    DebugSymbols = new DebugSymbolsWrapper(symbols);
+                }
+                IntPtr advanced = QueryInterface(typeof(IDebugAdvanced2).GUID);
+                if (advanced != IntPtr.Zero)
+                {
+                    DebugAdvanced = new DebugAdvancedWrapper(advanced);
                 }
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                DebugSymbols?.Dispose();
+                DebugAdvanced?.Dispose();
+            }
+            base.Dispose(disposing);
         }
 
         #region SOSHost.INativeDebugger
@@ -363,6 +379,16 @@ namespace SOS.Extensions
                 }
             }
             return hr;
+        }
+
+        internal interface IDebugAdvancedOperations
+        {
+            HResult GetSymbolInformation(DEBUG_SYMINFO which, ulong arg64, uint arg32, byte[] buffer, out int infoSize);
+        }
+
+        internal interface IDebugSymbolsOperations
+        {
+            HResult GetNameByOffsetWide(ulong offset, out ulong displacement);
         }
 
         public HResult GetOffsetBySymbol(int moduleIndex, string symbol, out ulong address)
