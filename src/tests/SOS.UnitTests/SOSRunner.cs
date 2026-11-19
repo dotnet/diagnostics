@@ -772,13 +772,6 @@ public class SOSRunner : IDisposable
             // Issue: https://github.com/dotnet/diagnostics/issues/3126
             processRunner.WithRuntimeConfiguration("EnableWriteXorExecute", "0");
 
-            // Setup the extension environment variable
-            string extensions = config.DotNetDiagnosticExtensions();
-            if (!string.IsNullOrEmpty(extensions))
-            {
-                processRunner.WithEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS", extensions);
-            }
-
             string gcServerMode = config.GetValue("GCServer");
             if (!string.IsNullOrEmpty(gcServerMode))
             {
@@ -1889,11 +1882,6 @@ public static class TestConfigurationExtensions
     {
         string dotnetDumpPath = config.GetValue("DotNetDumpPath");
         return TestConfiguration.MakeCanonicalPath(dotnetDumpPath);
-    }
-
-    public static string DotNetDiagnosticExtensions(this TestConfiguration config)
-    {
-        return TestConfiguration.MakeCanonicalPath(config.GetValue("DotNetDiagnosticExtensions"));
     }
 
     public static string SOSPath(this TestConfiguration config)
