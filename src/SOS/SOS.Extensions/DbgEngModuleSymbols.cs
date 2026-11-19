@@ -9,10 +9,12 @@ namespace SOS.Extensions
 {
     internal sealed class DbgEngModuleSymbols
     {
-        private readonly IDebugAdvanced2 _advanced;
-        private readonly IDebugSymbols3 _symbols;
+        private readonly DebuggerServices.IDebugAdvancedOperations _advanced;
+        private readonly DebuggerServices.IDebugSymbolsOperations _symbols;
 
-        internal DbgEngModuleSymbols(IDebugAdvanced2 advanced, IDebugSymbols3 symbols)
+        internal DbgEngModuleSymbols(
+            DebuggerServices.IDebugAdvancedOperations advanced,
+            DebuggerServices.IDebugSymbolsOperations symbols)
         {
             _advanced = advanced;
             _symbols = symbols;
@@ -31,7 +33,7 @@ namespace SOS.Extensions
 
             // Displacement may not exactly match the public symbol, but is correct where it matters
             // for our validated use cases.
-            hr = _symbols.GetNameByOffsetWide(address, null, 0, out _, out ulong offset);
+            hr = _symbols.GetNameByOffsetWide(address, out ulong offset);
             if (hr != HResult.S_OK || offset > address)
             {
                 return hr != HResult.S_OK ? hr : HResult.E_FAIL;
@@ -56,8 +58,12 @@ namespace SOS.Extensions
             const uint SymTagPublicSymbol = 10;
 
             symbol = null;
-            HResult hr = _advanced.GetSymbolInformation(DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE, address, SymTagPublicSymbol,
-                null, 0, out int size, null, 0, out _);
+            HResult hr = _advanced.GetSymbolInformation(
+                DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE,
+                address,
+                SymTagPublicSymbol,
+                null,
+                out int size);
             if (hr != HResult.S_OK && hr != HResult.S_FALSE)
             {
                 return hr;
@@ -67,8 +73,12 @@ namespace SOS.Extensions
                 return HResult.E_FAIL;
             }
             byte[] buffer = new byte[size];
-            hr = _advanced.GetSymbolInformation(DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE, address, SymTagPublicSymbol,
-                buffer, buffer.Length, out size, null, 0, out _);
+            hr = _advanced.GetSymbolInformation(
+                DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE,
+                address,
+                SymTagPublicSymbol,
+                buffer,
+                out size);
             if (hr == HResult.S_OK)
             {
                 symbol = Encoding.Unicode.GetString(buffer, 0, size).TrimEnd('\0');

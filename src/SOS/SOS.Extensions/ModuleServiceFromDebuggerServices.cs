@@ -158,8 +158,9 @@ namespace SOS.Extensions
 
             bool IModuleSymbols.TryGetSymbolName(ulong address, out string symbol, out ulong displacement)
             {
-                if (_moduleService._debuggerServices.DebugClient is IDebugAdvanced2 advanced &&
-                    _moduleService._debuggerServices.DebugClient is IDebugSymbols3 symbols)
+                DebugAdvancedWrapper advanced = _moduleService._debuggerServices.DebugAdvanced;
+                DebugSymbolsWrapper symbols = _moduleService._debuggerServices.DebugSymbols;
+                if (advanced is not null && symbols is not null)
                 {
                     _dbgEngSymbols ??= new DbgEngModuleSymbols(advanced, symbols);
                     return _dbgEngSymbols.GetSymbolByOffset(address, out symbol, out displacement).IsOK;
