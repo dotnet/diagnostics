@@ -155,7 +155,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             List<ulong> visited = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64,
-                manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager => manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         visited.Add(module.ImageBase);
                         return new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 0));
@@ -435,7 +435,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             List<ulong> visited = [];
             string cdacPath = Path.Combine(AppContext.BaseDirectory, "private-cdac");
             using RuntimeDiscoveryTestTarget target = new(os, architecture, manager =>
-                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), services => {
+                manager.AddProviderFactory<IRuntimeDescriptionProvider>( services => {
                     factoryTarget = services.GetService<ITarget>();
                     return new TestRuntimeDiscoveryProvider(module => {
                         visited.Add(module.ImageBase);
@@ -486,7 +486,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             other.AddCoreRuntime(0x20000);
             IModule otherModule = Assert.Single(other.Enumerate()).RuntimeModule;
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64,
-                manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager => manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module =>
                         new RuntimeDescription(otherModule, RuntimeType.NativeAOT, new Version(1, 0)), priority: 1)));
             target.AddModule(0x20000, "/plugins/custom");
@@ -523,7 +523,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public void HigherPriorityProvidersOwnHintedModules()
         {
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64,
-                manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager => manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module =>
                         new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 2, 3, 4)), priority: 1)));
             target.AddModule(0x20000, @"C:\app\custom.exe", entryPoint: true);
@@ -544,7 +544,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             List<ulong> visited = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Create(platform), Architecture.X64,
-                manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager => manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         visited.Add(module.ImageBase);
                         return module.ImageBase == 0x20000
@@ -575,7 +575,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             OSPlatform os = OSPlatform.Create(platform);
             using RuntimeDiscoveryTestTarget target = new(os, architecture,
-                manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager => manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module =>
                         new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 2)), priority: 1)));
             target.AddModule(0x20000, os == OSPlatform.Windows ? @"C:\plugins\custom.dll" : "/plugins/custom", needsSymbols: true);
@@ -593,7 +593,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public void ProviderCannotDescribeAnotherModuleInTheSameTarget()
         {
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64,
-                manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), services =>
+                manager => manager.AddProviderFactory<IRuntimeDescriptionProvider>( services =>
                     new TestRuntimeDiscoveryProvider(_ =>
                         new RuntimeDescription(services.GetService<IModuleService>().GetModuleFromBaseAddress(0x30000),
                             RuntimeType.NativeAOT, new Version(1, 0)), priority: 1)));
@@ -617,7 +617,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 int[] priorities = highPriorityRegisteredFirst ? [100, 50] : [50, 100];
                 foreach (int priority in priorities)
                 {
-                    manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                    manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                         new TestRuntimeDiscoveryProvider(module => {
                             calls.Add(priority);
                             return new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(priority, 0));
@@ -637,12 +637,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             List<int> calls = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64, manager => {
-                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         calls.Add(100);
                         return null;
                     }, priority: 100));
-                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         calls.Add(50);
                         return new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 0));
@@ -663,12 +663,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             List<(int Priority, ulong ModuleBase)> calls = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64, manager => {
-                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         calls.Add((100, module.ImageBase));
                         return null;
                     }, priority: 100));
-                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         calls.Add((50, module.ImageBase));
                         return module.ImageBase >= 0x20000
@@ -697,12 +697,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             List<(int Priority, ulong ModuleBase)> calls = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64, manager => {
-                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         calls.Add((100, module.ImageBase));
                         return null;
                     }, priority: 100));
-                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         calls.Add((50, module.ImageBase));
                         return module.ImageBase == 0x20000
@@ -726,7 +726,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             List<ulong> visited = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64,
-                manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager => manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         visited.Add(module.ImageBase);
                         return module.ImageBase == 0x10000
@@ -756,7 +756,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             List<ulong> visited = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64,
-                manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                manager => manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         visited.Add(module.ImageBase);
                         return null;
@@ -918,7 +918,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64, manager => {
                 foreach (int priority in new[] { 100, 50 })
                 {
-                    manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                    manager.AddProviderFactory<IRuntimeDescriptionProvider>( _ =>
                         new TestRuntimeDiscoveryProvider(module => {
                             calls.Add((priority, module.ImageBase));
                             return module.ImageBase == (priority == 100 ? 0x20000UL : 0x30000UL)

@@ -10,11 +10,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumpconcurrentqueue", Aliases = new string[] { "dcq" }, Help = "Displays concurrent queue content.")]
     public class DumpConcurrentQueueCommand : ClrMDHelperCommandBase
     {
+        public DumpConcurrentQueueCommand(IServiceProvider services, ClrRuntime runtime = null)
+            : base(services)
+        {
+            Runtime = runtime;
+        }
+
         [Argument(Help = "The address of a ConcurrentQueue object.")]
         public string Address { get; set; }
 
-        [ServiceImport(Optional = true)]
-        public ClrRuntime Runtime { get; set; }
+        public ClrRuntime Runtime { get; }
 
         public override void Invoke()
         {

@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -8,6 +9,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "threads", Aliases = new string[] { "setthread" }, Help = "Lists the threads in the target or sets the current thread.")]
     public class ThreadsCommand : CommandBase
     {
+        public ThreadsCommand(IServiceProvider services, IThreadService threadService, IContextService contextService)
+            : base(services)
+        {
+            ThreadService = threadService;
+            ContextService = contextService;
+        }
+
         [Argument(Help = "The thread index or id to set, otherwise displays the list of threads.")]
         public uint? Thread { get; set; } = null;
 
@@ -17,11 +25,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
 
-        [ServiceImport]
-        public IThreadService ThreadService { get; set; }
+        public IThreadService ThreadService { get; }
 
-        [ServiceImport]
-        public IContextService ContextService { get; set; }
+        public IContextService ContextService { get; }
 
         public override void Invoke()
         {

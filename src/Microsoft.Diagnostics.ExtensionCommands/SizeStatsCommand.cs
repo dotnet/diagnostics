@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
@@ -12,6 +13,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "sizestats", Help = "Size statistics for the GC heap.")]
     public sealed class SizeStatsCommand : ClrRuntimeCommandBase
     {
+        public SizeStatsCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         public override void Invoke()
         {
             SizeStats(Generation.Generation0, isFree: false);

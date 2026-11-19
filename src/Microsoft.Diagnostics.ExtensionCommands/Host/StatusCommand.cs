@@ -2,10 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 
@@ -15,17 +12,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "sosflush", DefaultOptions = "--reset", Help = "Resets the internal cached state.")]
     public class StatusCommand : CommandBase
     {
-        [ServiceImport]
-        public IHost Host { get; set; }
+        public StatusCommand(IServiceProvider services, IHost host, IServiceManager serviceManager, ISymbolService symbolService, IContextService contextService)
+            : base(services)
+        {
+            Host = host;
+            ServiceManager = serviceManager;
+            SymbolService = symbolService;
+            ContextService = contextService;
+        }
 
-        [ServiceImport]
-        public IServiceManager ServiceManager { get; set; }
+        public IHost Host { get; }
 
-        [ServiceImport]
-        public ISymbolService SymbolService { get; set; }
+        public IServiceManager ServiceManager { get; }
 
-        [ServiceImport]
-        public IContextService ContextService { get; set; }
+        public ISymbolService SymbolService { get; }
+
+        public IContextService ContextService { get; }
 
         [Option(Name = "--reset", Aliases = new[] { "-reset" }, Help = "Resets the internal cached state.")]
         public bool Reset { get; set; }
@@ -66,16 +68,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 this.DisplaySettingService();
                 Write(SymbolService.ToString());
 
-                List<Assembly> extensions = new(ServiceManager.ExtensionsLoaded);
-                extensions.Insert(0, Assembly.GetExecutingAssembly());
-
-                WriteLine("Extensions loaded:");
-                foreach (Assembly extension in extensions)
+                WriteLine("Diagnostics modules registered:");
+                foreach (IDiagnosticsModule module in ServiceManager.DiagnosticModules)
                 {
-                    string path = extension.Location;
-                    FileVersionInfo versionInfo = FileVersionInfo.GetVersionInfo(path);
-                    WriteLine($"-> {versionInfo.ProductVersion} {path}");
+                    Type moduleType = module.GetType();
+                    WriteLine($"-> {moduleType.FullName} ({moduleType.Assembly.GetName().Version})");
                 }
+
                 WriteLine($"Host runtime {RuntimeInformation.FrameworkDescription} on {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}");
                 long memoryUsage = GC.GetTotalMemory(forceFullCollection: true);
                 WriteLine($"GC memory usage for managed SOS components: {memoryUsage:##,#} bytes");

@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -39,11 +40,18 @@ namespace SOS.Hosting
     [Command(Name = "threadstate",       DefaultOptions = "ThreadState",         Help = "Pretty prints the meaning of a threads state.")]
     public class SOSCommand : SOSCommandBase
     {
+        public SOSCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         [FilterInvoke]
-        public static bool FilterInvoke(
-            [ServiceImport(Optional = true)] ManagedOnlyCommandFilter managedOnly,
-            [ServiceImport(Optional = true)] IRuntime runtime) =>
-                SOSCommandBase.Filter(managedOnly, runtime);
+        public static bool FilterInvoke(IServiceProvider services)
+        {
+            ManagedOnlyCommandFilter managedOnly = services.GetService<ManagedOnlyCommandFilter>();
+            IRuntime runtime = services.GetService<IRuntime>();
+            return SOSCommandBase.Filter(managedOnly, runtime);
+        }
     }
 
     [Command(Name = "comstate",          DefaultOptions = "COMState",            Help = "Lists the COM apartment model for each thread.")]
@@ -53,19 +61,32 @@ namespace SOS.Hosting
     [Command(Name = "watsonbuckets",     DefaultOptions = "WatsonBuckets",       Help = "Displays the Watson buckets.")]
     public class WindowsSOSCommand : SOSCommandBase
     {
+        public WindowsSOSCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         /// <summary>
         /// These commands are Windows only.
         /// </summary>
         [FilterInvoke]
-        public static bool FilterInvoke(
-            [ServiceImport(Optional = true)] ITarget target,
-            [ServiceImport(Optional = true)] ManagedOnlyCommandFilter managedOnly,
-            [ServiceImport(Optional = true)] IRuntime runtime) =>
-                target != null && target.OperatingSystem == OSPlatform.Windows && SOSCommandBase.Filter(managedOnly, runtime);
+        public static bool FilterInvoke(IServiceProvider services)
+        {
+            ITarget target = services.GetService<ITarget>();
+            ManagedOnlyCommandFilter managedOnly = services.GetService<ManagedOnlyCommandFilter>();
+            IRuntime runtime = services.GetService<IRuntime>();
+            return target != null && target.OperatingSystem == OSPlatform.Windows && SOSCommandBase.Filter(managedOnly, runtime);
+        }
     }
 
     public class SOSCommandBase : CommandBase
     {
+        public SOSCommandBase(IServiceProvider services)
+            : base(services)
+        {
+            SOSHost = services.GetRequiredService<SOSHost>();
+        }
+
         /// <summary>
         /// Empty service used to prevent native commands from being run
         /// </summary>
@@ -76,8 +97,7 @@ namespace SOS.Hosting
         [Argument(Name = "arguments", Help = "Arguments to SOS command.")]
         public string[] Arguments { get; set; }
 
-        [ServiceImport]
-        public SOSHost SOSHost { get; set; }
+        public SOSHost SOSHost { get; }
 
         public override void Invoke()
         {

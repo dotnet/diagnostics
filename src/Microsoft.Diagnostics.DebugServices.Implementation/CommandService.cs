@@ -8,6 +8,7 @@ using System.CommandLine;
 using System.CommandLine.Help;
 using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -229,42 +230,38 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Add the commands and aliases attributes found in the type.
         /// </summary>
-        /// <param name="type">Command type to search</param>
-        public void AddCommands(Type type) => AddCommands(type, factory: null);
-
-        /// <summary>
-        /// Add the commands and aliases attributes found in the type.
-        /// </summary>
-        /// <param name="type">Command type to search</param>
+        /// <typeparam name="TCommand">Command implementation to register</typeparam>
         /// <param name="factory">function to create command instance</param>
-        public void AddCommands(Type type, Func<IServiceProvider, object> factory)
+        public void AddCommands<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
+            DynamicallyAccessedMemberTypes.PublicProperties)] TCommand>(
+            Func<IServiceProvider, TCommand> factory) where TCommand : class
         {
-            if (type.IsClass)
+            if (factory is null)
             {
-                factory ??= (services) => Utilities.CreateInstance(type, services);
-
-                // Only look at the actual type and not any the base types for command attributes
-                CommandAttribute[] commandAttributes = (CommandAttribute[])type.GetCustomAttributes(typeof(CommandAttribute), inherit: false);
-                foreach (CommandAttribute commandAttribute in commandAttributes)
+                throw new ArgumentNullException(nameof(factory));
+            }
+            Type type = typeof(TCommand);
+            // Only look at the actual type and not any the base types for command attributes
+            CommandAttribute[] commandAttributes = (CommandAttribute[])type.GetCustomAttributes(typeof(CommandAttribute), inherit: false);
+            foreach (CommandAttribute commandAttribute in commandAttributes)
+            {
+                bool dup = true;
+                foreach (CommandGroup group in _commandGroups)
                 {
-                    bool dup = true;
-                    foreach (CommandGroup group in _commandGroups)
+                    // If the group doesn't contain a duplicate command name, add it to that group
+                    if (!group.Contains(commandAttribute.Name))
                     {
-                        // If the group doesn't contain a duplicate command name, add it to that group
-                        if (!group.Contains(commandAttribute.Name))
-                        {
-                            group.CreateCommand(type, commandAttribute, factory);
-                            dup = false;
-                            break;
-                        }
-                    }
-                    // If this is a duplicate command, create a new group and add it to the beginning. The default group must be last.
-                    if (dup)
-                    {
-                        CommandGroup group = new(_commandPrompt);
-                        _commandGroups.Insert(0, group);
                         group.CreateCommand(type, commandAttribute, factory);
+                        dup = false;
+                        break;
                     }
+                }
+                // If this is a duplicate command, create a new group and add it to the beginning. The default group must be last.
+                if (dup)
+                {
+                    CommandGroup group = new(_commandPrompt);
+                    _commandGroups.Insert(0, group);
+                    group.CreateCommand(type, commandAttribute, factory);
                 }
             }
         }
@@ -380,7 +377,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <param name="type">Command type to search</param>
             /// <param name="commandAttribute">command attribute</param>
             /// <param name="factory">function to create command instance</param>
-            internal void CreateCommand(Type type, CommandAttribute commandAttribute, Func<IServiceProvider, object> factory)
+            internal void CreateCommand(
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)] Type type,
+                CommandAttribute commandAttribute, Func<IServiceProvider, object> factory)
             {
                 Command command = new(commandAttribute.Name, commandAttribute.Help);
                 List<(PropertyInfo, Argument)> arguments = new();
@@ -484,7 +483,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 CommandAttribute commandAttribute,
                 IEnumerable<(PropertyInfo, Argument)> arguments,
                 IEnumerable<(PropertyInfo, Option)> options,
-                Type type,
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] Type type,
                 Func<IServiceProvider, object> factory)
             {
                 _commandAttribute = commandAttribute;
@@ -528,6 +527,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                         _filterInvokeAttribute = filterInvokeAttribute;
                         _methodInfoFilter = methodInfo;
+                    }
+                    if (methodInfo == _methodInfo || methodInfo == _methodInfoHelp || methodInfo == _methodInfoFilter)
+                    {
+                        if (methodInfo.ContainsGenericParameters ||
+                            methodInfo.GetParameters().Any(parameter => parameter.ParameterType.IsByRef || parameter.ParameterType.IsPointer))
+                        {
+                            throw new ArgumentException($"Command method {methodInfo.Name} in {type} must be non-generic and cannot take by-reference or pointer parameters.");
+                        }
                     }
                 }
                 if (_methodInfo == null)
@@ -636,10 +643,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 object instance = null;
                 if (!methodInfo.IsStatic)
                 {
-                    instance = _factory(services);
-                    SetProperties(context, parser, instance);
+                    instance = CreateCommand(context, parser, services);
                 }
                 return Utilities.Invoke(methodInfo, instance, services);
+            }
+
+            private object CreateCommand(ParseResult context, Command parser, IServiceProvider services)
+            {
+                object command = _factory(services) ?? throw new DiagnosticsException($"The factory for command {Name} returned null.");
+                SetProperties(context, parser, command);
+                return command;
             }
 
             private void SetProperties(ParseResult contextParseResult, Command parser, object instance)
@@ -655,7 +668,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     defaultParseResult = parser.Parse(commandLine);
                 }
 
-                // Now initialize the option and service properties from the default and command line options
+                // Now initialize the option properties from the default and command line options
                 foreach ((PropertyInfo Property, Option Option) option in _options)
                 {
                     object value = option.Property.GetValue(instance);

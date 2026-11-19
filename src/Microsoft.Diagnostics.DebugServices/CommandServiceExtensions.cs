@@ -2,50 +2,26 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
     public static class CommandServiceExtensions
     {
         /// <summary>
-        /// Add commands from assemblies. Searches for the command and alias attributes in all the assemblies' types.
+        /// Registers a command implementation using constructor injection.
         /// </summary>
-        /// <param name="commandService">command service instance</param>
-        /// <param name="assemblies">list of assemblies to search</param>
-        /// <exception cref="FileNotFoundException">assembly or reference not found</exception>
-        /// <exception cref="NotSupportedException">not supported</exception>
-        public static void AddCommands(this ICommandService commandService, IEnumerable<Assembly> assemblies)
+        public static void AddCommands<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors |
+            DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicProperties)] TCommand>(
+            this ICommandService commandService) where TCommand : class
         {
-            commandService.AddCommands(assemblies.SelectMany((assembly) => assembly.GetExportedTypes()));
-        }
-
-        /// <summary>
-        /// Add commands from an assembly. Searches for the command and alias attributes in all the assembly's types.
-        /// </summary>
-        /// <param name="commandService">command service instance</param>
-        /// <param name="assembly">assembly to search for commands</param>
-        /// <exception cref="FileNotFoundException">assembly or reference not found</exception>
-        /// <exception cref="NotSupportedException">not supported</exception>
-        public static void AddCommands(this ICommandService commandService, Assembly assembly)
-        {
-            commandService.AddCommands(assembly.GetExportedTypes());
-        }
-
-        /// <summary>
-        /// Searches for the command and alias attributes in all types.
-        /// </summary>
-        /// <param name="commandService">command service instance</param>
-        /// <param name="types">list of types to search</param>
-        public static void AddCommands(this ICommandService commandService, IEnumerable<Type> types)
-        {
-            foreach (Type type in types)
+            if (commandService is null)
             {
-                commandService.AddCommands(type);
+                throw new ArgumentNullException(nameof(commandService));
             }
+            ObjectFactory factory = ActivatorUtilities.CreateFactory(typeof(TCommand), Type.EmptyTypes);
+            commandService.AddCommands<TCommand>(services => (TCommand)factory(services, Array.Empty<object>()));
         }
     }
 }

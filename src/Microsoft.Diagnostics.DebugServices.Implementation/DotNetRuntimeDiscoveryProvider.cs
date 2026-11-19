@@ -5,7 +5,6 @@ using System;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
-    [ProviderExport(Type = typeof(IRuntimeDescriptionProvider))]
     public sealed class DotNetRuntimeDiscoveryProvider : IRuntimeDescriptionProvider
     {
         private readonly RuntimeDescriptionBuilder _builder;
