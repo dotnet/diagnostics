@@ -58,12 +58,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         }
 
         internal static Column ForEnum<TEnum>()
-            where TEnum : struct
+            where TEnum : struct, Enum
         {
             int len = 0;
-            foreach (TEnum t in Enum.GetValues(typeof(TEnum)))
+            foreach (string name in Enum.GetNames(typeof(TEnum)))
             {
-                len = Math.Max(len, t.ToString().Length);
+                len = Math.Max(len, name.Length);
             }
 
             return s_enum.WithWidth(len);
