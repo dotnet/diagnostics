@@ -170,6 +170,8 @@ public sealed class LldbHostingTests
             start.Environment[rootVariable] = directory;
         }
 
+        using HostSlotPool.Reservation reservation = await HostSlotPool.Shared.ReserveAsync(
+            SessionKind.Probe, cancellationToken: TestContext.Current.CancellationToken);
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Could not start Apple LLDB.");
         Task<string> stdout = process.StandardOutput.ReadToEndAsync();
         Task<string> stderr = process.StandardError.ReadToEndAsync();

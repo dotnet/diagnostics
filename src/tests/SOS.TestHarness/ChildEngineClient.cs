@@ -117,12 +117,20 @@ public sealed class ChildEngineClient : ILiveDebuggerHost, IStartupDiagnosticHos
         _reader = new Thread(ReadLoop) { IsBackground = true, Name = $"enginehost-reader-{name}" };
         _reader.Start();
 
-        WaitForReady(TimeSpan.FromSeconds(120));
+        try
+        {
+            WaitForReady(TimeSpan.FromSeconds(120));
 
-        // Select the DAC for this config's Dac axis (Legacy => false, CDac on .NET 11+ => true). SOS is
-        // already loaded by the time the child reports ready, so issue it now. The same dump is reused
-        // across both DAC values — only this debug-time toggle differs.
-        Send("!runtimes --usecdac " + DacPolicy.UseCDac(dac));
+            // Select the DAC for this config's Dac axis (Legacy => false, CDac on .NET 11+ => true). SOS is
+            // already loaded by the time the child reports ready, so issue it now. The same dump is reused
+            // across both DAC values — only this debug-time toggle differs.
+            Send("!runtimes --usecdac " + DacPolicy.UseCDac(dac));
+        }
+        catch
+        {
+            Dispose();
+            throw;
+        }
     }
 
     /// <summary>A child engine over a crash/snapshot dump.</summary>
@@ -277,7 +285,14 @@ public sealed class ChildEngineClient : ILiveDebuggerHost, IStartupDiagnosticHos
         {
             if (!_process.HasExited)
             {
-                _stdin.Close(); // EOF -> child's ReadLine returns null -> clean exit
+                try
+                {
+                    _stdin.Close(); // EOF -> child's ReadLine returns null -> clean exit
+                }
+                catch
+                {
+                    // Still kill the child if closing a broken pipe fails.
+                }
                 if (!_process.WaitForExit(5000))
                 {
                     _process.Kill(entireProcessTree: true);
@@ -290,6 +305,14 @@ public sealed class ChildEngineClient : ILiveDebuggerHost, IStartupDiagnosticHos
         }
         finally
         {
+            try
+            {
+                _process.WaitForExit(10000);
+            }
+            catch
+            {
+                // best effort
+            }
             _process.Dispose();
         }
     }

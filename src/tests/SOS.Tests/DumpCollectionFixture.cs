@@ -75,14 +75,7 @@ public sealed class DumpCollectionFixture : IAsyncDisposable
         string dump = await Task.Run(() => SnapshotStore.GetDump(
             config.Flavor, config.Target, stop, config.GcType, config.DumpKind, config.CoreVersion),
             cancellationToken);
-        HostSlotPool pool = config.Host switch
-        {
-            Host.Cdb => HostSlotPool.Cdb,
-            Host.Lldb => HostSlotPool.Lldb,
-            Host.DotnetDump => HostSlotPool.DotNetDump,
-            _ => throw new ArgumentOutOfRangeException(nameof(config)),
-        };
-        HostSlotPool.Reservation reservation = await pool.ReserveAsync(cancellationToken: cancellationToken);
+        HostSlotPool.Reservation reservation = await HostSlotPool.Shared.ReserveAsync(cancellationToken: cancellationToken);
         try
         {
             return new DumpSession(config.Host, config.Target, stop, config.Flavor,

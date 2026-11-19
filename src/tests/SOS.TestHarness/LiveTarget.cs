@@ -21,17 +21,9 @@ public sealed class LiveTarget : Target
     // Sentinel for "stopped at the crash" - not a real stop-point name (can't collide).
     private const string CrashMarker = "\0crash";
 
-    // Live debugging does not parallelize like dump replay: every live session spawns its own debugger
-    // (lldb) ptrace-attached to a running debuggee. Letting xunit launch one per core (≈20 here)
-    // overwhelms the box - lldb sessions begin to busy-spin and never return, stacking command timeouts
-    // into an apparent hang. Bound the number of concurrent live sessions so a few slow ones can't
-    // saturate every core. Override with SOSHARNESS_MAX_LIVE; default leaves generous headroom below the
-    // core count.
-    private static readonly SemaphoreSlim s_liveGate = new(ComputeMaxConcurrentLive());
-
     private readonly TargetDefinition _definition;
     private ILiveDebuggerHost? _host;
-    private bool _gateHeld;
+    private readonly HostSlotPool.Reservation _reservation;
     private string? _at; // current stop name, CrashMarker, or null (still at the initial break)
     private bool _disposed;
 
@@ -42,12 +34,7 @@ public sealed class LiveTarget : Target
     {
         _definition = definition;
 
-        // Hold the live-session slot for the entire lifetime of this target (launch -> commands ->
-        // dispose), not just creation, so the cap actually bounds concurrent live debuggers. Observe the
-        // ambient test cancellation so a Ctrl+C while queued behind the gate unwinds promptly instead of
-        // blocking until a slot frees.
-        s_liveGate.Wait(HarnessCancellation.Token);
-        _gateHeld = true;
+        _reservation = HostSlotPool.Shared.Reserve(SessionKind.Live, cancellationToken: HarnessCancellation.Token);
         try
         {
             Dictionary<string, string> environment = definition.EnvironmentVariables is null
@@ -64,20 +51,9 @@ public sealed class LiveTarget : Target
         }
         catch
         {
-            s_liveGate.Release();
-            _gateHeld = false;
+            _reservation.Dispose();
             throw;
         }
-    }
-
-    private static int ComputeMaxConcurrentLive()
-    {
-        if (int.TryParse(Environment.GetEnvironmentVariable("SOSHARNESS_MAX_LIVE"), out int configured) && configured > 0)
-        {
-            return configured;
-        }
-
-        return Math.Clamp(Environment.ProcessorCount / 4, 2, 6);
     }
 
     protected override void GoToStopPointCore(string stopName)
@@ -181,13 +157,14 @@ public sealed class LiveTarget : Target
         }
 
         _disposed = true;
-        _host?.Dispose();
-        _host = null;
-
-        if (_gateHeld)
+        try
         {
-            _gateHeld = false;
-            s_liveGate.Release();
+            _host?.Dispose();
+        }
+        finally
+        {
+            _host = null;
+            _reservation.Dispose();
         }
     }
 }

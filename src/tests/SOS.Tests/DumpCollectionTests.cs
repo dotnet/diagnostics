@@ -13,6 +13,54 @@ namespace SOS.Tests;
 
 public sealed class DumpCollectionTests
 {
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(16)]
+    public void ExecutionOptionsChooseOneLimitForCollectionsAndSessions(int? requested)
+    {
+        ITestFrameworkExecutionOptions options = TestFrameworkOptions.ForExecution(new TestAssemblyConfiguration());
+        options.SetMaxParallelThreads(requested);
+
+        int capacity = SosTestFramework.ConfigureExecutionOptions(options);
+
+        Assert.Equal(requested switch
+        {
+            null => Math.Min(8, Environment.ProcessorCount),
+            0 => Environment.ProcessorCount,
+            _ => requested.Value,
+        }, capacity);
+        Assert.Equal(capacity, options.MaxParallelThreads());
+        Assert.Equal(ParallelAlgorithm.Conservative, options.ParallelAlgorithm());
+    }
+
+    [Fact]
+    public void SerialExecutionUsesOneSessionEvenWithAHigherThreadSetting()
+    {
+        ITestFrameworkExecutionOptions options = TestFrameworkOptions.ForExecution(new TestAssemblyConfiguration());
+        options.SetMaxParallelThreads(8);
+        options.SetDisableParallelization(true);
+
+        Assert.Equal(1, SosTestFramework.ConfigureExecutionOptions(options));
+        Assert.Equal(1, options.MaxParallelThreads());
+    }
+
+    [Fact]
+    public void UnboundedOrAggressiveExecutionUsesBoundedConservativeScheduling()
+    {
+        ITestFrameworkExecutionOptions options = TestFrameworkOptions.ForExecution(new TestAssemblyConfiguration());
+        options.SetMaxParallelThreads(-1);
+        Assert.Equal(Math.Min(8, Environment.ProcessorCount), SosTestFramework.ConfigureExecutionOptions(options));
+        Assert.Equal(Math.Min(8, Environment.ProcessorCount), options.MaxParallelThreads());
+
+        options.SetMaxParallelThreads(8);
+        options.SetParallelAlgorithm(ParallelAlgorithm.Aggressive);
+        Assert.Equal(8, SosTestFramework.ConfigureExecutionOptions(options));
+        Assert.Equal(ParallelAlgorithm.Conservative, options.ParallelAlgorithm());
+    }
+
     [Fact]
     public async Task MatchingRowsFromDifferentClassesShareCollectionAndKeepTheirIdentity()
     {
@@ -248,6 +296,10 @@ public sealed class DumpCollectionTests
 
     private static async Task<DumpSession> OpenFakeSession(HostSlotPool pool, TestConfig config, string stop, CancellationToken token)
     {
+        using (await pool.ReserveAsync(SessionKind.Capture, cancellationToken: token))
+        {
+            await Task.Yield();
+        }
         HostSlotPool.Reservation reservation = await pool.ReserveAsync(cancellationToken: token);
         return new DumpSession(config.Host, config.Target, stop, config.Flavor, "unused", reservation: reservation);
     }
@@ -282,7 +334,7 @@ public sealed class DumpCollectionTests
         public void Ordinary()
         {
             using HostSlotPool.Reservation reservation = SchedulingFixture.Pool.Reserve(
-                SchedulingFixture.Pool.Select(), TestContext.Current.CancellationToken);
+                SessionKind.Live, cancellationToken: TestContext.Current.CancellationToken);
         }
     }
 

@@ -11,25 +11,14 @@ namespace SOS.TestHarness;
 /// across many assertions, and is memoized by <see cref="Targets"/> and reused by every
 /// <see cref="DeadTarget"/> cursor that navigates to the same point.
 ///
-/// Host lifetime differs by backend:
-/// <list type="bullet">
-///   <item><b>cdb</b> runs dbgeng in a <see cref="ChildEngineClient"/> child process. Dump sessions
-///   are distributed across two capacity-1 slots, bounding retained dump mappings while allowing
-///   two independent sessions to execute concurrently.</item>
-///   <item><b>dotnet-dump</b> sessions are distributed across two capacity-1 slots. This materially
-///   reduces analyzer queueing and host churn while keeping retained dump mappings bounded.</item>
-///   <item><b>lldb</b> children retain their loaded core and hosted SOS runtime. Like cdb, they are
-///   distributed across two capacity-1 slots to preserve limited concurrency while bounding memory.</item>
-/// </list>
+/// All debugger backends share one session pool with live targets and capture workloads.
+/// Collection sessions retain a reservation; ordinary sessions reserve any available slot during use.
 /// </summary>
 internal sealed class DumpSession : IPooledHost
 {
     private readonly Host _hostKind;
-    private readonly HostSlot _slot;
-    private readonly HostSlotPool _pool;
     private readonly object _commandGate = new();
     private HostSlotPool.Reservation? _reservation;
-    private IDebuggerHost? _host;
 
     // One diagnostics collector for the life of this session (survives a pooled host being closed and
     // reopened), for the child-process hosts that support capture. Null for the cdb child host.
@@ -53,7 +42,7 @@ internal sealed class DumpSession : IPooledHost
         {
             using (AcquireDebuggerSession())
             {
-                return (_host as IStartupDiagnosticHost)?.StartupDiagnostics.ToArray() ?? [];
+                return (_reservation!.Slot.Host as IStartupDiagnosticHost)?.StartupDiagnostics.ToArray() ?? [];
             }
         }
     }
@@ -73,17 +62,11 @@ internal sealed class DumpSession : IPooledHost
         Dac = dac;
         HostRuntime = hostRuntime;
 
-        // Bound resource-heavy dump hosts independently. Cdb uses two slots to retain the suite's
-        // observed two-test concurrency without allowing one EngineHost process per memoized session.
-        _pool = hostKind switch
+        if (hostKind is not (Host.Cdb or Host.Lldb or Host.DotnetDump))
         {
-            Host.Cdb => HostSlotPool.Cdb,
-            Host.Lldb => HostSlotPool.Lldb,
-            Host.DotnetDump => HostSlotPool.DotNetDump,
-            _ => throw new ArgumentOutOfRangeException(nameof(hostKind)),
-        };
+            throw new ArgumentOutOfRangeException(nameof(hostKind));
+        }
         _reservation = reservation;
-        _slot = reservation?.Slot ?? _pool.Select();
 
         // The child-process hosts (lldb, dotnet-dump) capture their stdout/stderr and crash dumps; the cdb
         // child host runs dbgeng out-of-process and is not wired for capture.
@@ -111,8 +94,8 @@ internal sealed class DumpSession : IPooledHost
         bool ownsReservation = _reservation is null;
         try
         {
-            _reservation ??= _pool.Reserve(_slot);
-            return new CommandLease(this, _slot.Acquire(this), ownsReservation);
+            _reservation ??= HostSlotPool.Shared.Reserve(owner: this, cancellationToken: HarnessCancellation.Token);
+            return new CommandLease(this, _reservation.Slot.Acquire(this), ownsReservation);
         }
         catch
         {
@@ -131,7 +114,7 @@ internal sealed class DumpSession : IPooledHost
         {
             try
             {
-                _slot.CloseCurrent();
+                _reservation?.Slot.CloseCurrent();
             }
             finally
             {
@@ -179,7 +162,7 @@ internal sealed class DumpSession : IPooledHost
         {
             using (AcquireDebuggerSession())
             {
-                return action(_host!);
+                return action(_reservation!.Slot.Host);
             }
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException or TimeoutException)
@@ -200,19 +183,7 @@ internal sealed class DumpSession : IPooledHost
         }
     }
 
-    IDebuggerHost IPooledHost.Host => _host!;
-
-    void IPooledHost.OpenHost()
-    {
-        _host = HostFactory.CreateDumpHost(_hostKind, Flavor, DumpPath, Dac, CoreVersion, HostRuntime,
+    IDebuggerHost IPooledHost.CreateHost() =>
+        HostFactory.CreateDumpHost(_hostKind, Flavor, DumpPath, Dac, CoreVersion, HostRuntime,
             SnapshotStore.TargetExe(Flavor, TargetName, CoreVersion), _diagnostics);
-        _host.LoadSos();
-    }
-
-    void IPooledHost.CloseHost()
-    {
-        _host?.Dispose();
-        _host = null;
-    }
-
 }
