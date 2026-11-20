@@ -15,24 +15,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// ClrMD runtime service implementation. This MUST never be disposable.
     /// </summary>
-    [ServiceExport(Type = typeof(IDataReader), Scope = ServiceScope.Target)]
     public class DataReader : IDataReader
     {
         private readonly ITarget _target;
         private IEnumerable<ModuleInfo> _modules;
 
-        [ServiceImport]
-        private IModuleService ModuleService { get; set; }
+        private IModuleService ModuleService { get; }
 
-        [ServiceImport]
-        private IMemoryService MemoryService { get; set; }
+        private IMemoryService MemoryService { get; }
 
-        [ServiceImport]
-        private IThreadService ThreadService { get; set; }
+        private IThreadService ThreadService { get; }
 
-        public DataReader(ITarget target)
+        public DataReader(ITarget target, IModuleService moduleService, IMemoryService memoryService, IThreadService threadService)
         {
             _target = target;
+            ModuleService = moduleService;
+            MemoryService = memoryService;
+            ThreadService = threadService;
             target.OnFlushEvent.Register(() => _modules = null);
         }
 

@@ -10,17 +10,21 @@ namespace Microsoft.Diagnostics.DebugServices
     /// </summary>
     public abstract class CommandBase
     {
+        protected CommandBase(IServiceProvider services)
+        {
+            Services = services ?? throw new ArgumentNullException(nameof(services));
+            Console = services.GetRequiredService<IConsoleService>();
+        }
+
         /// <summary>
         /// The services provided to this command
         /// </summary>
-        [ServiceImport]
-        public IServiceProvider Services { get; set; }
+        public IServiceProvider Services { get; }
 
         /// <summary>
         /// Console service
         /// </summary>
-        [ServiceImport]
-        public IConsoleService Console { get; set; }
+        public IConsoleService Console { get; }
 
         /// <summary>
         /// Execute the command

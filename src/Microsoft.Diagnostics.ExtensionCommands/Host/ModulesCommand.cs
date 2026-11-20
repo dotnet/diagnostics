@@ -18,6 +18,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "modules", Aliases = new string[] { "lm" }, Help = "Displays the native modules in the process.")]
     public class ModulesCommand : CommandBase
     {
+        public ModulesCommand(IServiceProvider services, ITarget target, IModuleService moduleService, IMemoryService memoryService)
+            : base(services)
+        {
+            Target = target;
+            ModuleService = moduleService;
+            MemoryService = memoryService;
+        }
+
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
 
@@ -33,14 +41,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--address", Aliases = new string[] { "-a" }, Help = "Lookup address in module list.")]
         public ulong? Address { get; set; }
 
-        [ServiceImport]
-        public ITarget Target { get; set; }
+        public ITarget Target { get; }
 
-        [ServiceImport]
-        public IModuleService ModuleService { get; set; }
+        public IModuleService ModuleService { get; }
 
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
+        public IMemoryService MemoryService { get; }
 
         public override void Invoke()
         {

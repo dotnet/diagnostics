@@ -11,8 +11,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "setclrpath", Help = "Sets the path to load coreclr DAC/DBI files.")]
     public class SetClrPath : CommandBase
     {
-        [ServiceImport(Optional = true)]
-        public IRuntime Runtime { get; set; }
+        public SetClrPath(IServiceProvider services, IRuntime runtime = null)
+            : base(services)
+        {
+            Runtime = runtime;
+        }
+
+        public IRuntime Runtime { get; }
 
         [Argument(Name = "path", Help = "Runtime directory path.")]
         public string Argument { get; set; }

@@ -16,6 +16,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = CommandName, Aliases = new[] { "EEHeap" }, Help = "Displays information about native memory that CLR has allocated.")]
     public class EEHeapCommand : ClrRuntimeCommandBase
     {
+        public EEHeapCommand(IServiceProvider services, IMemoryService memoryService)
+            : base(services)
+        {
+            MemoryService = memoryService;
+        }
+
         private const string CommandName = "eeheap";
 
         private HeapWithFilters HeapWithFilters { get; set; }
@@ -23,8 +29,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         // Don't use the word "Total" if we have filtered out entries
         private string TotalString => HeapWithFilters.HasFilters ? "Partial" : "Total";
 
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
+        public IMemoryService MemoryService { get; }
 
         [Option(Name = "-gc", Help = "Only display the GC.")]
         public bool ShowGC { get; set; }

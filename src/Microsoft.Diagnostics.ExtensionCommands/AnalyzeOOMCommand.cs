@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
@@ -10,6 +11,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "analyzeoom", Aliases = new[] { "AnalyzeOOM" }, Help = "Displays the info of the last OOM that occurred on an allocation request to the GC heap.")]
     public class AnalyzeOOMCommand : ClrRuntimeCommandBase
     {
+        public AnalyzeOOMCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         public override void Invoke()
         {
             bool foundOne = false;

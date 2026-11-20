@@ -12,20 +12,31 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "runtimes", Aliases = new string[] { "setruntime" }, Help = "Lists the runtimes in the target or changes the default runtime.")]
     public class RuntimesCommand : CommandBase
     {
-        [ServiceImport]
-        public IRuntimeService RuntimeService { get; set; }
+        public RuntimesCommand(
+            IServiceProvider services,
+            IRuntimeService runtimeService,
+            IContextService contextService,
+            ISettingsService settingsService,
+            ITarget target,
+            IModuleService moduleService)
+            : base(services)
+        {
+            RuntimeService = runtimeService;
+            ContextService = contextService;
+            SettingsService = settingsService;
+            Target = target;
+            ModuleService = moduleService;
+        }
 
-        [ServiceImport]
-        public IContextService ContextService { get; set; }
+        public IRuntimeService RuntimeService { get; }
 
-        [ServiceImport]
-        public ISettingsService SettingsService { get; set; }
+        public IContextService ContextService { get; }
 
-        [ServiceImport]
-        public ITarget Target { get; set; }
+        public ISettingsService SettingsService { get; }
 
-        [ServiceImport]
-        public IModuleService ModuleService { get; set; }
+        public ITarget Target { get; }
+
+        public IModuleService ModuleService { get; }
 
         [Argument(Help = "Switch to the runtime by id.")]
         public int? Id { get; set; }

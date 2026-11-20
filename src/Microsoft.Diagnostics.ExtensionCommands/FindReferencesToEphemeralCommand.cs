@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
@@ -13,6 +14,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "ephrefs", Help = "Finds older generation objects which reference objects in the ephemeral segment.")]
     public class FindReferencesToEphemeralCommand : ClrRuntimeCommandBase
     {
+        public FindReferencesToEphemeralCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         private readonly HashSet<ulong> _referenced = new();
         private ulong _referencedSize;
 

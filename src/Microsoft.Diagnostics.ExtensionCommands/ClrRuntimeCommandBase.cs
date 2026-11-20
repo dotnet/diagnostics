@@ -9,12 +9,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 {
     public abstract class ClrRuntimeCommandBase : CommandBase
     {
+        protected ClrRuntimeCommandBase(IServiceProvider services)
+            : base(services)
+        {
+            Runtime = services.GetService<ClrRuntime>();
+        }
+
         public const string RuntimeNotFoundMessage = $"No CLR runtime found.\nThis means that a .NET runtime module or the DAC for the runtime can not be found, loaded or downloaded.\nFor more information see https://go.microsoft.com/fwlink/?linkid=2135652";
 
-        [ServiceImport(Optional = true)]
-        public ClrRuntime Runtime { get; set; }
+        public ClrRuntime Runtime { get; }
 
         [FilterInvoke(Message = RuntimeNotFoundMessage)]
-        public static bool FilterInvoke([ServiceImport(Optional = true)] ClrRuntime runtime) => runtime != null;
+        public static bool FilterInvoke(IServiceProvider services) => services.GetService<ClrRuntime>() != null;
     }
 }

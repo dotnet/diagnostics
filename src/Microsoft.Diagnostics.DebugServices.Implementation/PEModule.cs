@@ -19,7 +19,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Creates a PEModule service instance of the downloaded or local (if exists) module file.
         /// </summary>
-        [ServiceExport(Scope = ServiceScope.Module)]
         public static PEModule CreatePEModule(IModule module, ISymbolService symbolService)
         {
             if (module.IndexTimeStamp.HasValue && module.IndexFileSize.HasValue)
