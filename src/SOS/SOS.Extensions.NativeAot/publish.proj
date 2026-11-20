@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.Build.Traversal">
+  <PropertyGroup>
+    <NativeAotProject>$(MSBuildThisFileDirectory)SOS.Extensions.NativeAot.csproj</NativeAotProject>
+    <NativeAotPublishDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'SOS.Extensions.NativeAot', '$(Configuration)', '$(SOSNativeAotTargetFramework)', '$(TargetRid)', 'publish'))</NativeAotPublishDir>
+    <CrossBuild Condition="'$(CrossBuild)' == '' and '$(CROSSCOMPILE)' == '1'">true</CrossBuild>
+    <TraversalPublishGlobalProperties>$(TraversalPublishGlobalProperties);_IsPublishing=true</TraversalPublishGlobalProperties>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(NativeAotProject)"
+                      AdditionalProperties="TargetOS=$(TargetOS);TargetArch=$(TargetArch);TargetArchitecture=$(TargetArch);TargetRid=$(TargetRid);RuntimeIdentifier=$(TargetRid);CrossBuild=$(CrossBuild);PublishDir=$(NativeAotPublishDir)"
+                      ReferenceOutputAssembly="false"
+                      Targets="Publish" />
+  </ItemGroup>
+
+  <Target Name="InstallNativeAotLibrary" AfterTargets="Build">
+    <ItemGroup>
+      <NativeAotBinaries Include="$(NativeAotPublishDir)SOS.Extensions.NativeAot.*" />
+    </ItemGroup>
+    <Error Condition="'@(NativeAotBinaries)' == ''" Text="NativeAOT did not produce the SOS extension in $(NativeAotPublishDir)." />
+    <Copy SourceFiles="@(NativeAotBinaries)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false" />
+  </Target>
+</Project>

@@ -2,9 +2,6 @@
   <PropertyGroup>
     <TargetFramework>$(SOSNativeAotTargetFramework)</TargetFramework>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(TargetRid)</RuntimeIdentifier>
-    <TargetArchitecture Condition="'$(TargetArchitecture)' == ''">$(TargetArch)</TargetArchitecture>
-    <CrossBuild Condition="'$(CrossBuild)' == '' and '$(CROSSCOMPILE)' == '1'">true</CrossBuild>
-    <UseCommonLocateNativeCompilerTarget Condition="'$(TargetOS)' != 'Windows_NT' and '$(TargetOS)' != 'windows'">true</UseCommonLocateNativeCompilerTarget>
     <AssemblyName>SOS.Extensions.NativeAot</AssemblyName>
     <RootNamespace>SOS.Extensions.NativeAot</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -12,7 +9,6 @@
     <SelfContained>true</SelfContained>
     <NativeLib>Shared</NativeLib>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <NeedsPublishing>true</NeedsPublishing>
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
@@ -21,13 +17,5 @@
     <ProjectReference Include="..\SOS.Extensions\SOS.Extensions.csproj" />
   </ItemGroup>
 
-  <Target Name="InstallNativeAotLibrary" AfterTargets="Publish">
-    <ItemGroup>
-      <NativeAotBinaries Include="$(PublishDir)$(AssemblyName).*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(NativeAotBinaries)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false" />
-  </Target>
-
-  <Import Project="$(RepositoryEngineeringDir)common\native\LocateNativeCompiler.targets"
-          Condition="'$(UseCommonLocateNativeCompilerTarget)' == 'true'" />
+  <Import Project="toolAot.targets" />
 </Project>

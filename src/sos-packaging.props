@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup Condition="'$(PackAsTool)' == 'true'">
-    <ProjectReference Include="$(RepoRoot)src\SOS\SOS.Extensions.NativeAot\SOS.Extensions.NativeAot.csproj"
+    <ProjectReference Include="$(RepoRoot)src\SOS\SOS.Extensions.NativeAot\publish.proj"
                       ReferenceOutputAssembly="false"
                       SkipGetTargetFrameworkProperties="true"
                       GlobalPropertiesToRemove="TargetFramework" />
