@@ -8,6 +8,7 @@
     <PublishAot>true</PublishAot>
     <SelfContained>true</SelfContained>
     <NativeLib>Shared</NativeLib>
+    <UseNativeAotForComponents>true</UseNativeAotForComponents>
     <InvariantGlobalization>true</InvariantGlobalization>
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
@@ -17,5 +18,5 @@
     <ProjectReference Include="..\SOS.Extensions\SOS.Extensions.csproj" />
   </ItemGroup>
 
-  <Import Project="toolAot.targets" />
+  <Import Project="$(RepoRoot)src\cdac\toolAot.targets" />
 </Project>
