@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 
@@ -72,7 +73,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (IDiagnosticsModule module in ServiceManager.DiagnosticModules)
                 {
                     Type moduleType = module.GetType();
-                    WriteLine($"-> {moduleType.FullName} ({moduleType.Assembly.GetName().Version})");
+                    Assembly assembly = moduleType.Assembly;
+                    string informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                        ?? assembly.GetName().Version?.ToString();
+                    WriteLine($"-> {moduleType.FullName} ({assembly.GetName().Name} {informationalVersion})");
+                }
+
+                IHostAssetResolver assetResolver = Services.GetService<IHostAssetResolver>();
+                if (!string.IsNullOrEmpty(assetResolver?.NativeBinariesDirectory))
+                {
+                    WriteLine($"SOS native directory: {assetResolver.NativeBinariesDirectory}");
                 }
 
                 WriteLine($"Host runtime {RuntimeInformation.FrameworkDescription} on {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}");

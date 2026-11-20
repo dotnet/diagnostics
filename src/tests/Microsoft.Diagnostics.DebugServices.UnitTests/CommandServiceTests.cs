@@ -43,9 +43,24 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         void IDisposable.Dispose() => Trace.Listeners.Remove(ListenerName);
 
+        [Fact]
+        public void AddCommandsCreatesActivatorFactoryLazily()
+        {
+            CommandService commands = new();
+
+            commands.AddCommands<AmbiguousConstructorCommand>();
+
+            Assert.Contains(commands.Commands, command => command.name == "ambiguousconstructor");
+        }
+
         [Theory, MemberData(nameof(GetConfiguration))]
         public void RuntimeCommandConstructorsInitializeInheritedDependencies(TestConfiguration config)
         {
+            if (OS.IsAlpine)
+            {
+                Assert.Skip("Not supported on Alpine Linux");
+            }
+
             using TestDump testDump = new(config);
             testDump.ServiceContainer.AddService<IConsoleService>(new CaptureConsoleService());
             IRuntime runtime = testDump.Target.Services.GetRequiredService<IRuntimeService>().EnumerateRuntimes().First();
@@ -149,6 +164,23 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.False(TestCommand1.Invoked);
             Assert.False(TestCommand2.Invoked);
             Assert.False(TestCommand3.Invoked);
+        }
+
+        [Command(Name = "ambiguousconstructor")]
+        private sealed class AmbiguousConstructorCommand
+        {
+            public AmbiguousConstructorCommand(IConsoleService console)
+            {
+            }
+
+            public AmbiguousConstructorCommand(IServiceProvider services)
+            {
+            }
+
+            [CommandInvoke]
+            public void Invoke()
+            {
+            }
         }
     }
 }
