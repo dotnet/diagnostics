@@ -51,7 +51,7 @@ if not exist "%__BinDir%" md "%__BinDir%"
 
 if "%__SkipConfigure%" == "0" (
     echo Configuring source-built universal DBI
-    call "%__RepoRootDir%\eng\native\gen-buildsys.cmd" "%__RepoRootDir%\src\dbi" "%__DbiIntermediatesDir%" %__VisualStudioVersion% %__HostArch% %__TargetOS% "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__TargetArch%" "-DRUNTIME_GENERATED_INCLUDE_DIR=%__ArtifactsIntermediatesDir%"
+    call "%__RepoRootDir%\eng\native\gen-buildsys.cmd" "%__RepoRootDir%\src\dbi" "%__DbiIntermediatesDir%" %__VisualStudioVersion% %__HostArch% %__TargetOS% "-DCMAKE_BUILD_TYPE=%__BuildType%" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__TargetArch%" "-DRUNTIME_GENERATED_INCLUDE_DIR=%__ArtifactsIntermediatesDir%"
     @if defined _echo @echo on
     if not !errorlevel! == 0 (
         echo Error: failed to configure source-built universal DBI.
