@@ -324,6 +324,17 @@ public sealed class SosOutput
         return this;
     }
 
+    /// <summary>Assert at least <paramref name="count"/> output lines contain <paramref name="literal"/>.</summary>
+    public SosOutput AssertLinesContaining(string literal, int count)
+    {
+        if (_lines.Count(line => line.Contains(literal, StringComparison.Ordinal)) < count)
+        {
+            throw Fail($"at least {count} lines to contain \"{literal}\"");
+        }
+
+        return this;
+    }
+
 
     // ---- Column-oriented helpers ---------------------------------------------------------
 

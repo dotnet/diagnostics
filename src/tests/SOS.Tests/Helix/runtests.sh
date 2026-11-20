@@ -124,15 +124,25 @@ prepare_dotnet_root()
 
   if [[ -n "$runtime_override" ]]; then
     runtime_override_root="$root/$runtime_override"
-    target_runtime_root="$dotnet_root/shared/Microsoft.NETCore.App/$runtime_version"
     if [[ ! -f "$runtime_override_root/System.Private.CoreLib.dll" ]]; then
       echo "The private runtime override was not found at '$runtime_override_root'." >&2
       exit 3
     fi
-    if [[ ! -f "$target_runtime_root/System.Private.CoreLib.dll" ]]; then
-      echo "The Helix-provisioned runtime was not found at '$target_runtime_root'." >&2
+    if [[ ! -f "$dotnet_root/shared/Microsoft.NETCore.App/$runtime_version/System.Private.CoreLib.dll" ]]; then
+      echo "The Helix-provisioned runtime was not found at '$dotnet_root/shared/Microsoft.NETCore.App/$runtime_version'." >&2
       exit 3
     fi
+
+    # Docker-based Helix queues mount the correlation payload read-only, so overlay a work item copy.
+    writable_dotnet_root="$root/dotnet-cli"
+    echo "Copying the Helix-provisioned dotnet root to '$writable_dotnet_root'."
+    rm -rf "$writable_dotnet_root"
+    cp -a "$dotnet_root/." "$writable_dotnet_root/"
+    chmod -R u+w "$writable_dotnet_root"
+    dotnet_root="$writable_dotnet_root"
+    export SOSHARNESS_DOTNET_ROOT="$dotnet_root"
+
+    target_runtime_root="$dotnet_root/shared/Microsoft.NETCore.App/$runtime_version"
     echo "Overlaying private runtime from '$runtime_override_root' onto '$target_runtime_root'."
     cp -a "$runtime_override_root/." "$target_runtime_root/"
     if [[ -f "$target_runtime_root/createdump" ]]; then
