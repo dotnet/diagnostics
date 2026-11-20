@@ -327,11 +327,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         private EventPipeEventSource _source;
         private int _pid;
         private IpcEndpointConfig _diagnosticPort;
+        private bool _useWildcardProcessId;
 
         public IReadOnlyList<EventPipeProvider> Providers => _providers.AsReadOnly();
         public EventPipeEventSource Source => _source;
 
-        public bool UseWildcardProcessId => _diagnosticPort != null;
+        public bool UseWildcardProcessId => _useWildcardProcessId;
 
         public EventPipeSessionController(int pid, string diagnosticPort, List<EventPipeProvider> providers, bool requestRundown = true, EventPipeBufferingMode bufferingMode = EventPipeBufferingMode.Drop)
         {
@@ -342,7 +343,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     string defaultAddress = PidIpcEndpoint.GetDefaultAddress(pid);
                     if (!string.IsNullOrEmpty(defaultAddress) && PidIpcEndpoint.IsDefaultAddressDSRouter(pid, defaultAddress))
                     {
-                        diagnosticPort = defaultAddress + ",connect";
+                        _useWildcardProcessId = true;
                     }
                 }
                 catch { }
@@ -351,6 +352,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             if (!string.IsNullOrEmpty(diagnosticPort))
             {
                 _diagnosticPort = IpcEndpointConfig.Parse(diagnosticPort);
+                _useWildcardProcessId = true;
                 if (!_diagnosticPort.IsConnectConfig)
                 {
                     throw new ArgumentException("DiagnosticPort is only supporting connect mode.");

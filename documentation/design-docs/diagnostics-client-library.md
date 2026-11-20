@@ -17,6 +17,30 @@ The goal of this library is as following:
 * Provide tool-specific functionalities that are too high-level (i.e. dumping the GC heap, parsing counter payload, etc.) This will broaden the scope of this library too far and will cause complexity 
 * Parse event payloads (i.e. - This is also command-specific and can be done by other libraries.
 
+## Unix socket ownership checks
+
+On Linux and macOS, PID-based endpoint resolution only considers runtime socket
+candidates whose file type is a Unix domain socket and whose owner matches the
+target process's filesystem UID (Linux) or effective UID (macOS). Symbolic links
+are not followed, and candidates are filtered before timestamp selection.
+Diagnostic-router candidates are subject to the same validation.
+Local published-process discovery applies the same checks directly to each
+enumerated candidate, caching process UIDs for the duration of the scan instead
+of rescanning the directory for every matching entry.
+
+On Linux x64, arm64, arm and x86, file metadata is read through libc's `syscall`
+export using the Linux `fstatat`/`fstatat64` kernel ABI. This avoids both
+libc-specific `struct stat` layouts and a dependency on newer glibc exports
+such as `statx`. The same interop works with glibc and musl. Other Linux
+architectures report an explicit unsupported-platform error.
+On macOS, metadata is read through the public `lstat` API.
+Neither path depends on the runtime's private native libraries.
+After connecting, the client validates the peer PID and UID reported by the
+kernel. If a candidate does not belong to the requested process, the client
+closes it and tries the next valid candidate. This binds pathname validation to
+the connected peer and preserves the existing diagnostic-router timestamp
+preference.
+
 ## Sample Code:
 
 Here are some sample code showing the usage of this library.
