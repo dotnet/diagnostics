@@ -31,19 +31,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IMemoryService MemoryService { get; }
 
-        [Option(Name = "-gc", Help = "Only display the GC.")]
+        [Option<bool>(Name = "-gc", Help = "Only display the GC.")]
         public bool ShowGC { get; set; }
 
-        [Option(Name = "-loader", Help = "Only display the Loader.")]
+        [Option<bool>(Name = "-loader", Help = "Only display the Loader.")]
         public bool ShowLoader { get; set; }
 
-        [Option(Name = "-heap")]
+        [Option<int>(Name = "-heap")]
         public int GCHeap { get; set; } = -1;
 
-        [Option(Name = "-segment")]
+        [Option<string>(Name = "-segment")]
         public string Segment { get; set; }
 
-        [Argument(Help = "Optional memory ranges in the form of: [Start [End]]")]
+        [Argument<string[]>(Help = "Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
         public override void Invoke()

@@ -25,13 +25,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
         }
 
-        [Argument(Help = "Test name: debugservices, clrma or analyze.")]
+        [Argument<string[]>(Help = "Test name: debugservices, clrma or analyze.")]
         public string[] TestNames { get; set; } = Array.Empty<string>();
 
-        [Option(Name = "--testdata", Help = "Test data xml file path.")]
+        [Option<string>(Name = "--testdata", Help = "Test data xml file path.")]
         public string TestDataFile { get; set; }
 
-        [Option(Name = "--dumpfile", Help = "Dump file path.")]
+        [Option<string>(Name = "--dumpfile", Help = "Dump file path.")]
         public string DumpFile { get; set; }
 
         public override void Invoke()

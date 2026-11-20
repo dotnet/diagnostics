@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public LiveObjectService LiveObjects { get; }
 
-        [Option(Name = "-unreachable", Aliases = new string[] { "-inclUnrooted", "-iu" })]
+        [Option<bool>(Name = "-unreachable", Aliases = new string[] { "-inclUnrooted", "-iu" })]
         public bool IncludeUnreachable { get; set; }
 
         public override void Invoke()

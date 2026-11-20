@@ -17,13 +17,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IDiagnosticLoggingService DiagnosticLoggingService { get; }
 
-        [Argument(Name = "path", Help = "Log file path.")]
+        [Argument<string>(Name = "path", Help = "Log file path.")]
         public string FilePath { get; set; }
 
-        [Option(Name = "--enable", Aliases = new string[] { "enable", "-e" }, Help = "Enable internal logging.")]
+        [Option<bool>(Name = "--enable", Aliases = new string[] { "enable", "-e" }, Help = "Enable internal logging.")]
         public bool Enable { get; set; }
 
-        [Option(Name = "--disable", Aliases = new string[] { "disable", "-d" }, Help = "Disable internal logging.")]
+        [Option<bool>(Name = "--disable", Aliases = new string[] { "disable", "-d" }, Help = "Disable internal logging.")]
         public bool Disable { get; set; }
 
         public override void Invoke()

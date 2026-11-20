@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
         }
 
-        [Argument(Name = "arguments", Help = "module_name type_or_method_name (or module_name!type_or_method_name)")]
+        [Argument<string[]>(Name = "arguments", Help = "module_name type_or_method_name (or module_name!type_or_method_name)")]
         public string[] Arguments { get; set; }
 
         private enum MatchKind

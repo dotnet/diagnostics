@@ -21,13 +21,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             DumpHeap = dumpHeap;
         }
 
-        [Option(Name = "-ti", Help = "Print the hill climbing log.", Aliases = new string[] { "-hc" })]
+        [Option<bool>(Name = "-ti", Help = "Print the hill climbing log.", Aliases = new string[] { "-hc" })]
         public bool PrintHillClimbingLog { get; set; }
 
-        [Option(Name = "-wi", Help = "Print all work items that are queued.")]
+        [Option<bool>(Name = "-wi", Help = "Print all work items that are queued.")]
         public bool PrintWorkItems { get; set; }
 
-        [Option(Name = "-stat", Aliases = new[] { "-summary" }, Help = "Print a summary of queued work items grouped by type (DumpHeap -stat style).")]
+        [Option<bool>(Name = "-stat", Aliases = new[] { "-summary" }, Help = "Print a summary of queued work items grouped by type (DumpHeap -stat style).")]
         public bool PrintWorkItemStats { get; set; }
 
         public DumpHeapService DumpHeap { get; }

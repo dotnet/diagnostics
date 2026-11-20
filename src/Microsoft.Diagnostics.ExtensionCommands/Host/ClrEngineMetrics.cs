@@ -28,6 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 return false;
             }
+            HostLayouts.Register(reader.LayoutManager);
 
             try
             {

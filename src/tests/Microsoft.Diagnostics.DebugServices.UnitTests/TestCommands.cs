@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public ITarget Target { get; }
 
-        [Argument(Name = "FileName", Help = "Test argument.")]
+        [Argument<string>(Name = "FileName", Help = "Test argument.")]
         public string FileName { get; set; }
 
         public override void Invoke()
@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public ITarget Target { get; }
 
-        [Option(Name = "--foo", Help = "Test option.")]
+        [Option<int>(Name = "--foo", Help = "Test option.")]
         public int Foo { get; set; }
 
         public override void Invoke()
@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public ITarget Target { get; }
 
-        [Option(Name = "--foo", Help = "Test option.")]
+        [Option<int>(Name = "--foo", Help = "Test option.")]
         public int Foo { get; set; }
 
         public override void Invoke()

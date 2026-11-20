@@ -40,16 +40,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IMemoryService Memory { get; }
 
-        [Option(Name = "-short")]
+        [Option<bool>(Name = "-short")]
         public bool Short { get; set; }
 
-        [Option(Name = "-nofinalizer")]
+        [Option<bool>(Name = "-nofinalizer")]
         public bool NoFinalizer { get; set; }
 
-        [Argument(Name = "start")]
+        [Argument<string>(Name = "start")]
         public string StartAddress { get; set; }
 
-        [Argument(Name = "end")]
+        [Argument<string>(Name = "end")]
         public string EndAddress { get; set; }
 
         public override void Invoke()

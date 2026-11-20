@@ -23,43 +23,43 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IModuleService ModuleService { get; }
 
-        [Option(Name = "--ms", Aliases = new string[] { "-ms" }, Help = "Use the public Microsoft symbol server.")]
+        [Option<bool>(Name = "--ms", Aliases = new string[] { "-ms" }, Help = "Use the public Microsoft symbol server.")]
         public bool MicrosoftSymbolServer { get; set; }
 
-        [Option(Name = "--mi", Aliases = new string[] { "-mi" }, Help = "Use the internal symweb symbol server.")]
+        [Option<bool>(Name = "--mi", Aliases = new string[] { "-mi" }, Help = "Use the internal symweb symbol server.")]
         public bool InternalSymbolServer { get; set; }
 
-        [Option(Name = "--interactive", Aliases = new string[] { "-interactive" }, Help = "Allows user interaction will be included in the authentication flow.")]
+        [Option<bool>(Name = "--interactive", Aliases = new string[] { "-interactive" }, Help = "Allows user interaction will be included in the authentication flow.")]
         public bool Interactive { get; set; }
 
-        [Option(Name = "--disable", Aliases = new string[] { "-disable", "-clear" }, Help = "Clear or disable symbol download support.")]
+        [Option<bool>(Name = "--disable", Aliases = new string[] { "-disable", "-clear" }, Help = "Clear or disable symbol download support.")]
         public bool Disable { get; set; }
 
-        [Option(Name = "--reset", Aliases = new string[] { "-reset" }, Help = "Reset the HTTP symbol servers clearing any cached failures.")]
+        [Option<bool>(Name = "--reset", Aliases = new string[] { "-reset" }, Help = "Reset the HTTP symbol servers clearing any cached failures.")]
         public bool Reset { get; set; }
 
-        [Option(Name = "--cache", Aliases = new string[] { "-cache" }, Help = "Specify a symbol cache directory.")]
+        [Option<string>(Name = "--cache", Aliases = new string[] { "-cache" }, Help = "Specify a symbol cache directory.")]
         public string Cache { get; set; }
 
-        [Option(Name = "--nocache", Aliases = new string[] { "-nocache" }, Help = "Do not automatically add the default cache before a server.")]
+        [Option<bool>(Name = "--nocache", Aliases = new string[] { "-nocache" }, Help = "Do not automatically add the default cache before a server.")]
         public bool NoCache { get; set; }
 
-        [Option(Name = "--directory", Aliases = new string[] { "-directory" }, Help = "Specify a directory to search for symbols.")]
+        [Option<string>(Name = "--directory", Aliases = new string[] { "-directory" }, Help = "Specify a directory to search for symbols.")]
         public string Directory { get; set; }
 
-        [Option(Name = "--pat", Aliases = new string[] { "-pat" }, Help = "Access token to the authenticated server.")]
+        [Option<string>(Name = "--pat", Aliases = new string[] { "-pat" }, Help = "Access token to the authenticated server.")]
         public string AccessToken { get; set; }
 
-        [Option(Name = "--timeout", Aliases = new string[] { "-timeout" }, Help = "Specify the symbol server timeout in minutes.")]
+        [Option<int?>(Name = "--timeout", Aliases = new string[] { "-timeout" }, Help = "Specify the symbol server timeout in minutes.")]
         public int? Timeout { get; set; }
 
-        [Option(Name = "--retrycount", Aliases = new string[] { "-retrycount" }, Help = "Specify the symbol server timeout retry count.")]
+        [Option<int?>(Name = "--retrycount", Aliases = new string[] { "-retrycount" }, Help = "Specify the symbol server timeout retry count.")]
         public int? RetryCount { get; set; }
 
-        [Option(Name = "--loadsymbols", Aliases = new string[] { "-loadsymbols" }, Help = "Attempt to load native symbols for all modules.")]
+        [Option<bool>(Name = "--loadsymbols", Aliases = new string[] { "-loadsymbols" }, Help = "Attempt to load native symbols for all modules.")]
         public bool LoadSymbols { get; set; }
 
-        [Argument(Name = "url", Help = "Symbol server URL.")]
+        [Argument<string>(Name = "url", Help = "Symbol server URL.")]
         public string SymbolServerUrl { get; set; }
 
         public override void Invoke()
