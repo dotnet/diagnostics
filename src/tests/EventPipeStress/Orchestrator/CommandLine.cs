@@ -8,22 +8,25 @@ namespace Orchestrator
     public static class OrchestrateCommandLine
     {
         static public Option<ReaderType> ReaderTypeOption = 
-            new Option<ReaderType>(
-                alias: "--reader-type",
-                getDefaultValue: () => ReaderType.Stream,
-                description: "The method to read the stream of events.");
+            new Option<ReaderType>("--reader-type")
+            {
+                DefaultValueFactory = _ => ReaderType.Stream,
+                Description = "The method to read the stream of events."
+            };
 
         static public Option<bool> PauseOption = 
-            new Option<bool>(
-                alias: "--pause",
-                getDefaultValue: () => false,
-                description: "Should the orchestrator pause before starting each test phase for a debugger to attach?");
+            new Option<bool>("--pause")
+            {
+                DefaultValueFactory = _ => false,
+                Description = "Should the orchestrator pause before starting each test phase for a debugger to attach?"
+            };
 
         static public Option<bool> RundownOption = 
-            new Option<bool>(
-                alias: "--rundown",
-                getDefaultValue: () => true,
-                description: "Should the EventPipe session request rundown events?");
+            new Option<bool>("--rundown")
+            {
+                DefaultValueFactory = _ => true,
+                Description = "Should the EventPipe session request rundown events?"
+            };
 
         static private Option<int> _bufferSizeOption = null;
         static public Option<int> BufferSizeOption 
@@ -33,11 +36,12 @@ namespace Orchestrator
                 if (_bufferSizeOption != null)
                     return _bufferSizeOption;
 
-                _bufferSizeOption = new Option<int>(
-                                            alias: "--buffer-size",
-                                            getDefaultValue: () => 256,
-                                            description: "The size of the buffer requested in the EventPipe session");
-                _bufferSizeOption.AddValidator(CommandLineOptions.GreaterThanZeroValidator);
+                _bufferSizeOption = new Option<int>("--buffer-size")
+                {
+                    DefaultValueFactory = _ => 256,
+                    Description = "The size of the buffer requested in the EventPipe session"
+                };
+                _bufferSizeOption.Validators.Add(CommandLineOptions.GreaterThanZeroValidator);
                 return _bufferSizeOption;
             }
             private set {}
@@ -51,11 +55,12 @@ namespace Orchestrator
                 if (_slowReaderOption != null)
                     return _slowReaderOption;
 
-                _slowReaderOption = new Option<int>(
-                                            alias: "--slow-reader",
-                                            getDefaultValue: () => 0,
-                                            description: "<Only valid for EventPipeEventSource reader> Delay every read by this many milliseconds.");
-                _slowReaderOption.AddValidator(CommandLineOptions.GreaterThanOrEqualZeroValidator);
+                _slowReaderOption = new Option<int>("--slow-reader")
+                {
+                    DefaultValueFactory = _ => 0,
+                    Description = "<Only valid for EventPipeEventSource reader> Delay every read by this many milliseconds."
+                };
+                _slowReaderOption.Validators.Add(CommandLineOptions.GreaterThanOrEqualZeroValidator);
                 return _slowReaderOption;
             }
             private set {}
@@ -69,11 +74,12 @@ namespace Orchestrator
                 if (_coresOption != null)
                     return _coresOption;
 
-                _coresOption = new Option<int>(
-                                        alias: "--cores",
-                                        getDefaultValue: () => Environment.ProcessorCount,
-                                        description: "The number of logical cores to restrict the writing process to.");
-                _coresOption.AddValidator(CoreValueMustBeFeasibleValidator);
+                _coresOption = new Option<int>("--cores")
+                {
+                    DefaultValueFactory = _ => Environment.ProcessorCount,
+                    Description = "The number of logical cores to restrict the writing process to."
+                };
+                _coresOption.Validators.Add(CoreValueMustBeFeasibleValidator);
                 return _coresOption;
             }
             private set {}
@@ -87,22 +93,22 @@ namespace Orchestrator
                 if (_iterationsOption != null)
                     return _iterationsOption;
 
-                _iterationsOption = new Option<int>(
-                                        alias: "--iterations",
-                                        getDefaultValue: () => 1,
-                                        description: "The number of times to run the test.");
-                _iterationsOption.AddValidator(CommandLineOptions.GreaterThanZeroValidator);
+                _iterationsOption = new Option<int>("--iterations")
+                {
+                    DefaultValueFactory = _ => 1,
+                    Description = "The number of times to run the test."
+                };
+                _iterationsOption.Validators.Add(CommandLineOptions.GreaterThanZeroValidator);
                 return _iterationsOption;
             }
             private set {}
         }
 
-        static public ValidateSymbol<OptionResult> CoreValueMustBeFeasibleValidator = (OptionResult result) =>
+        static public Action<OptionResult> CoreValueMustBeFeasibleValidator = (OptionResult result) =>
         {
             int val = result.GetValueOrDefault<int>();
             if (val < 1 || val > Environment.ProcessorCount)
-                return $"Core count must be between 1 and {Environment.ProcessorCount}";
-            return null;
+                result.AddError($"Core count must be between 1 and {Environment.ProcessorCount}");
         };
     }
 }
