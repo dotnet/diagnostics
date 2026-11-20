@@ -18,7 +18,7 @@ public sealed class DumpHeapThinLockTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopThinLock)]
     [MemberData(nameof(Matrix))]
     public async Task DumpHeap_ThinLock(TestConfig config)
     {
@@ -28,7 +28,7 @@ public sealed class DumpHeapThinLockTests
                 "Thin-lock data is unavailable from the DAC on Linux musl, so dumpheap -thinlock omits the table.");
         }
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopThinLock);
         target.GoToStopPoint(TargetCatalog.StopThinLock);
 
         // The uniquely-typed object the LockHolder thread holds a Monitor on.

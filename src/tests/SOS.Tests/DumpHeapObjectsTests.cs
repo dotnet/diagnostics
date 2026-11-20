@@ -23,11 +23,11 @@ public sealed class DumpHeapObjectsTests
     // (-strings, -thinlock, -live/-dead, generations) stay dump-only.
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], liveness: Liveness.AllValid);
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(Matrix))]
     public async Task DumpHeap_ObjectsStatisticsAndSize(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
         using IDisposable session = target.AcquireDebuggerSession();
 

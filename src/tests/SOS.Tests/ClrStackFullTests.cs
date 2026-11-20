@@ -24,11 +24,11 @@ public sealed class ClrStackFullTests
                 TargetCatalog.NestedException,
             ]);
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_Full(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         SosTable plain = target.Clrstack();

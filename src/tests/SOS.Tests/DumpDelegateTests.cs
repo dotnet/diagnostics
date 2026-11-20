@@ -33,11 +33,11 @@ public sealed class DumpDelegateTests
         }
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpDelegate_ResolvesWorkerEntry(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // Find the ThreadStart delegate that targets WorkerEntry (workers are started with it).

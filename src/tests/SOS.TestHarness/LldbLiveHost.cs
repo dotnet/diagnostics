@@ -56,7 +56,19 @@ public sealed class LldbLiveHost : LldbHostBase, ILiveDebuggerHost
         _dac = dac;
         _coreVersion = coreVersion;
         _hostRuntime = hostRuntime;
+        try
+        {
+            Initialize(exePath, environmentVariables);
+        }
+        catch
+        {
+            Dispose();
+            throw;
+        }
+    }
 
+    private void Initialize(string exePath, IReadOnlyDictionary<string, string>? environmentVariables)
+    {
         // The debuggee inherits the lldb process environment. Disable W^E so SOS's bpmd can patch JIT-ed
         // code (see dotnet/diagnostics#3126), matching what the legacy live lldb harness set. For a
         // framework-dependent (Core) debuggee, point its apphost at the multi-version test runtime install

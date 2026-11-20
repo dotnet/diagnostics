@@ -25,13 +25,13 @@ public sealed class ClrStackICorDebugTests
             Flavor.Core | Flavor.Framework,
             filter: TestMatrices.SupportsICorDebugStackWalk);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopArgsLocals, ForTarget = TargetCatalog.Scenarios)]
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_ICorDebug(TestConfig config)
     {
         SOSTestSkips.SkipICorDebugStackWalk(config);
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, config.Target == TargetCatalog.Scenarios ? TargetCatalog.StopArgsLocals : null);
         if (config.Target == TargetCatalog.Scenarios)
         {
             target.GoToStopPoint(TargetCatalog.StopArgsLocals);

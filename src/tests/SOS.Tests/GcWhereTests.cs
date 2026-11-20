@@ -21,11 +21,11 @@ public sealed class GcWhereTests
     public static TheoryData<TestConfig> LiveMatrix =>
         TestMatrices.CurrentThreadCommands([TargetCatalog.Scenarios], Liveness.AllValid);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = "gen0")]
     [MemberData(nameof(Matrix))]
     public async Task GcWhere_Structure(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, "gen0");
         target.GoToStopPoint("gen0");
 
         ulong obj = FindObject(target);

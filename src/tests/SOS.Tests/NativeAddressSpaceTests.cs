@@ -14,11 +14,11 @@ public sealed class NativeAddressSpaceTests
 {
     public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task NotReachableInRange_ScansPointerRange(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // notreachableinrange treats [start,end) as an array of object pointers (it backs !finalizerqueue).

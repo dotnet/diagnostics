@@ -23,11 +23,11 @@ public sealed class ClrStackTests
     public static TheoryData<TestConfig> AsyncMainMatrix { get; } =
         TestMatrices.StackWalk([TargetCatalog.AsyncMain]);
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(AsyncMainMatrix))]
     public async Task ClrStack_DmlPreservesAsyncMainName(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         SosTable stack = target.ClrstackDml();
@@ -65,11 +65,11 @@ public sealed class ClrStackTests
             // stackwalk runs dump AND live. Most other clrstack variations stay dump-only.
             liveness: Liveness.AllValid);
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(RegistersMatrix))]
     public async Task ClrStack_Registers(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
         using IDisposable session = target.AcquireDebuggerSession();
 
@@ -137,11 +137,11 @@ public sealed class ClrStackTests
         return data;
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(GcRootsMatrix))]
     public async Task ClrStack_GcRoots(TestConfig config, string stopName)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, stopName);
         target.GoToStopPoint(stopName);
         using IDisposable session = target.AcquireDebuggerSession();
 
@@ -184,11 +184,11 @@ public sealed class ClrStackTests
         CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10,
         filter: TestMatrices.SupportsGcRootEnumeration);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = "roots")]
     [MemberData(nameof(GcRootsFlagMatrix))]
     public async Task ClrStack_GcRoots_Flags(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, "roots");
         target.GoToStopPoint("roots");
 
         SosTable gc = target.ClrstackGcRoots();

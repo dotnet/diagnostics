@@ -90,7 +90,15 @@ public sealed class DotNetDumpHost : IDebuggerHost, IDiagnosticHost
         }
 
         // Drain the startup banner up to the first marker so the host is ready for commands.
-        DrainToMarker(TimeSpan.FromSeconds(120));
+        try
+        {
+            DrainToMarker(TimeSpan.FromSeconds(120));
+        }
+        catch
+        {
+            Dispose();
+            throw;
+        }
     }
 
     public void LoadSos()
@@ -225,8 +233,15 @@ public sealed class DotNetDumpHost : IDebuggerHost, IDiagnosticHost
         {
             if (!_process.HasExited)
             {
-                _stdin.WriteLine("exit");
-                _stdin.Flush();
+                try
+                {
+                    _stdin.WriteLine("exit");
+                    _stdin.Flush();
+                }
+                catch
+                {
+                    // Still kill the child if its command pipe is broken.
+                }
                 if (!_process.WaitForExit(5000))
                 {
                     _process.Kill(entireProcessTree: true);

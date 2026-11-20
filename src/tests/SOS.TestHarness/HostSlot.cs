@@ -1,45 +1,89 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
+using System.Text.Json;
+
 namespace SOS.TestHarness;
 
-/// <summary>
-/// A host whose lifetime a <see cref="HostSlot"/> may open and close on demand.
-/// </summary>
-internal interface IPooledHost
+internal enum SessionKind
 {
-    IDebuggerHost Host { get; }
-
-    void OpenHost();
-
-    void CloseHost();
+    Dump,
+    Live,
+    Capture,
+    Probe,
 }
 
 /// <summary>
-/// Distributes memoized dump sessions across a fixed number of independent <see cref="HostSlot"/>
-/// instances. Each session remains assigned to one slot, preserving that slot's most-recently-used
-/// host reuse while allowing sessions assigned to different slots to execute concurrently.
+/// A session whose debugger hosts are created on demand and owned by individual slots.
+/// </summary>
+internal interface IPooledHost
+{
+    IDebuggerHost CreateHost();
+}
+
+/// <summary>
+/// Shares a backend-neutral budget between dump analyzers, live targets, and capture workloads.
+/// Unreserved dump hosts stay cached, but any kind of session can evict them to obtain a slot.
 /// </summary>
 internal sealed class HostSlotPool
 {
-    /// <summary>Two independent out-of-process cdb dump slots.</summary>
-    public static readonly HostSlotPool Cdb = new(capacity: 2);
+    private static readonly object s_sharedGate = new();
+    private static HostSlotPool? s_shared;
 
-    /// <summary>Two independent dotnet-dump analyze slots.</summary>
-    public static readonly HostSlotPool DotNetDump = new(capacity: 2);
+    public static HostSlotPool Shared
+    {
+        get
+        {
+            lock (s_sharedGate)
+            {
+                return s_shared ??= new(DefaultCapacity);
+            }
+        }
+    }
 
-    /// <summary>Two independent LLDB dump slots.</summary>
-    public static readonly HostSlotPool Lldb = new(capacity: 2);
+    internal static int DefaultCapacity => Math.Min(8, Environment.ProcessorCount);
 
     private readonly HostSlot[] _slots;
-    private int _next = -1;
+    private readonly HashSet<HostSlot> _reserved = [];
+    private readonly object _gate = new();
+    private readonly SemaphoreSlim _available;
+    private readonly long[] _acquisitions = new long[Enum.GetValues<SessionKind>().Length];
+    private readonly long[] _waitTicks = new long[Enum.GetValues<SessionKind>().Length];
+    private long _clock;
+    private long _cacheHits;
+    private long _evictions;
+    private int _peakReserved;
 
     public int Capacity => _slots.Length;
+
+    static HostSlotPool()
+    {
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            try
+            {
+                string statistics = JsonSerializer.Serialize(Shared.GetStatistics());
+                Console.WriteLine("SOS session budget: " + statistics);
+                Directory.CreateDirectory(RepoLayout.UploadRoot);
+                File.WriteAllText(Path.Combine(RepoLayout.UploadRoot, "session-budget.json"), statistics);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Console.Error.WriteLine($"Could not write SOS session statistics: {ex.Message}");
+            }
+            finally
+            {
+                Shared.CloseAll();
+            }
+        };
+    }
 
     public HostSlotPool(int capacity)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
 
+        _available = new SemaphoreSlim(capacity, capacity);
         _slots = new HostSlot[capacity];
         for (int i = 0; i < capacity; i++)
         {
@@ -47,19 +91,112 @@ internal sealed class HostSlotPool
         }
     }
 
-    public static HostSlot HostSlotFor(Host hostKind) => hostKind switch
+    internal static void ConfigureShared(int capacity)
     {
-        Host.Cdb => Cdb.Select(),
-        Host.Lldb => Lldb.Select(),
-        Host.DotnetDump => DotNetDump.Select(),
-        _ => throw new ArgumentOutOfRangeException(nameof(hostKind), hostKind, "Unsupported dump host."),
-    };
+        ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
+        lock (s_sharedGate)
+        {
+            if (s_shared is not null && s_shared.Capacity != capacity)
+            {
+                throw new InvalidOperationException("The shared session limit must be configured before the pool is used.");
+            }
+            s_shared ??= new(capacity);
+        }
+    }
 
-    /// <summary>Assign the next session to a slot, distributing sessions round-robin.</summary>
-    public HostSlot Select()
+    public Reservation Reserve(SessionKind kind = SessionKind.Dump, IPooledHost? owner = null, CancellationToken cancellationToken = default) =>
+        ReserveAsync(kind, owner, cancellationToken).GetAwaiter().GetResult();
+
+    public async Task<Reservation> ReserveAsync(SessionKind kind = SessionKind.Dump, IPooledHost? owner = null, CancellationToken cancellationToken = default)
     {
-        int index = (int)((uint)Interlocked.Increment(ref _next) % (uint)_slots.Length);
-        return _slots[index];
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+        if (kind != SessionKind.Dump && owner is not null)
+        {
+            throw new ArgumentException("Only dump reservations can reuse a cached host.", nameof(owner));
+        }
+
+        long start = Stopwatch.GetTimestamp();
+        await _available.WaitAsync(cancellationToken).ConfigureAwait(false);
+        Reservation? reservation = null;
+        try
+        {
+            bool cacheHit;
+            lock (_gate)
+            {
+                HostSlot[] available = _slots.Where(slot => !_reserved.Contains(slot)).ToArray();
+                HostSlot slot = (owner is null ? null : available.FirstOrDefault(slot => ReferenceEquals(slot.Owner, owner)))
+                    ?? available.FirstOrDefault(slot => slot.Owner is null)
+                    ?? available.MinBy(slot => slot.LastUsed)!;
+                cacheHit = owner is not null && ReferenceEquals(slot.Owner, owner);
+                _cacheHits += cacheHit ? 1 : 0;
+                _evictions += !cacheHit && slot.Owner is not null ? 1 : 0;
+                _reserved.Add(slot);
+                _peakReserved = Math.Max(_peakReserved, _reserved.Count);
+                _acquisitions[(int)kind]++;
+                _waitTicks[(int)kind] += Stopwatch.GetTimestamp() - start;
+                reservation = new Reservation(this, slot);
+            }
+
+            // Close outside the pool lock, but before giving the slot to a new workload.
+            if (!cacheHit)
+            {
+                reservation.Slot.CloseCurrent();
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            return reservation;
+        }
+        catch
+        {
+            if (reservation is not null)
+            {
+                reservation.Dispose();
+            }
+            else
+            {
+                _available.Release();
+            }
+            throw;
+        }
+    }
+
+    private void Release(HostSlot slot)
+    {
+        lock (_gate)
+        {
+            slot.LastUsed = ++_clock;
+            _reserved.Remove(slot);
+        }
+
+        _available.Release();
+    }
+
+    internal Statistics GetStatistics()
+    {
+        lock (_gate)
+        {
+            return new Statistics(Environment.ProcessorCount, Capacity, _reserved.Count,
+                _slots.Count(slot => !_reserved.Contains(slot) && slot.Owner is not null),
+                _peakReserved, _cacheHits, _evictions,
+                Enum.GetValues<SessionKind>().ToDictionary(kind => kind,
+                    kind => new Usage(_acquisitions[(int)kind], (double)_waitTicks[(int)kind] / Stopwatch.Frequency)));
+        }
+    }
+
+    internal sealed record Usage(long Acquisitions, double WaitSeconds);
+    internal sealed record Statistics(int ProcessorCount, int Capacity, int Reserved, int IdleRetained,
+        int PeakReserved, long CacheHits, long Evictions, IReadOnlyDictionary<SessionKind, Usage> Sessions);
+
+    /// <summary>A thread-independent reservation; command serialization remains the slot's responsibility.</summary>
+    public sealed class Reservation(HostSlotPool pool, HostSlot slot) : IDisposable
+    {
+        private HostSlotPool? _pool = pool;
+
+        public HostSlot Slot { get; } = slot;
+
+        public void Dispose() => Interlocked.Exchange(ref _pool, null)?.Release(Slot);
     }
 
     /// <summary>Close the currently-open host in every slot.</summary>
@@ -75,16 +212,19 @@ internal sealed class HostSlotPool
 /// <summary>
 /// Governs one live host instance within an individual slot. Pools provide bounded concurrency.
 ///
-/// <b>dotnet-dump</b>, <b>cdb</b>, and <b>lldb</b> retain loaded dump state, so small fixed pools
-/// preserve limited concurrency without unbounded memory growth.
-/// The most-recently-used host stays open and is evicted (disposed) only when a different target
-/// of the same kind is needed — so a run of assertions against one dump reuses the open host, and
-/// switching dumps reopens (cheap relative to the work).
+/// Dump analyzers retain loaded state while idle; reservations can evict them for any session kind.
+/// The host belongs to the slot, not its logical session: an old copy can finish closing here while
+/// another slot opens a replacement for the same session.
 /// </summary>
 internal sealed class HostSlot
 {
     private readonly object _lock = new();
-    private IPooledHost? _open;
+    private volatile IPooledHost? _open;
+    private IDebuggerHost? _host;
+
+    internal IPooledHost? Owner => _open;
+    internal long LastUsed { get; set; }
+    internal IDebuggerHost Host => _host ?? throw new InvalidOperationException("The slot has no open host.");
 
     /// <summary>
     /// Ensure <paramref name="owner"/>'s host is open and hold exclusive use of this slot until the
@@ -98,18 +238,17 @@ internal sealed class HostSlot
         {
             if (!ReferenceEquals(_open, owner))
             {
-                IPooledHost? previous = _open;
-                _open = null;
-                previous?.CloseHost();
+                CloseCurrent();
                 try
                 {
-                    owner.OpenHost();
+                    _host = owner.CreateHost();
+                    _host.LoadSos();
                 }
                 catch (Exception openException)
                 {
                     try
                     {
-                        owner.CloseHost();
+                        CloseCurrent();
                     }
                     catch (Exception closeException)
                     {
@@ -139,9 +278,10 @@ internal sealed class HostSlot
     {
         lock (_lock)
         {
-            IPooledHost? open = _open;
+            IDebuggerHost? host = _host;
             _open = null;
-            open?.CloseHost();
+            _host = null;
+            host?.Dispose();
         }
     }
 

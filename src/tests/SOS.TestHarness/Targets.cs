@@ -20,11 +20,6 @@ public static class Targets
 {
     private static readonly ConcurrentDictionary<(Host Host, string Target, string Stop, Flavor Flavor, GcType GcType, DumpKind DumpKind, CoreVersion CoreVersion, Dac Dac, HostRuntime HostRuntime), Lazy<DumpSession>> s_sessions = new();
 
-    static Targets()
-    {
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => DisposeAll();
-    }
-
     /// <summary>
     /// Get a debug target for a matrix row (<see cref="TestConfig"/>). With
     /// <see cref="TestConfig.Liveness"/> = <see cref="Liveness.Dump"/> you get a dump-backed
@@ -83,8 +78,6 @@ public static class Targets
     /// <summary>Close pooled debugger children.</summary>
     public static void DisposeAll()
     {
-        HostSlotPool.Cdb.CloseAll();
-        HostSlotPool.Lldb.CloseAll();
-        HostSlotPool.DotNetDump.CloseAll();
+        HostSlotPool.Shared.CloseAll();
     }
 }

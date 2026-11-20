@@ -23,11 +23,11 @@ public sealed class CodeInfoTests
     // survives the reduced Heap dump, so it stays on the default Heap Matrix.
     public static TheoryData<TestConfig> FullDumpMatrix => TestMatrices.FullDumpOnCoreVersions([TargetCatalog.Scenarios], CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(FullDumpMatrix))]
     public async Task EhInfo_ReportsClauses(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // A method with no try/catch has native code but no EH clauses.
@@ -53,11 +53,11 @@ public sealed class CodeInfoTests
         Assert.Equal(lockHolder.MethodDesc.Value, byIp.MethodDesc);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task GcInfo_ReportsEncoding(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
         EEMatch atHeap = Method(target, config.Flavor, "AtHeap");
 

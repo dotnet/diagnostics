@@ -19,11 +19,11 @@ public sealed class DumpDomainTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpDomain_Structure(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         DumpDomainResult domains = target.DumpDomain();
@@ -69,11 +69,11 @@ public sealed class DumpDomainTests
         }
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpDomain_AssemblyRoundTrip(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         DumpDomainResult domains = target.DumpDomain();

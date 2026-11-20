@@ -24,11 +24,11 @@ public sealed class SpecializedInspectionTests
     // capture a Full dump for net8 only. net9+ works on the default Heap dump.
     public static TheoryData<TestConfig> ThreadPoolMatrix => TestMatrices.FullDumpOnCoreVersions([TargetCatalog.Scenarios], CoreVersion.Net8);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task TimerInfo_ReportsRegisteredTimer(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // timerinfo is a managed extension command (dotnet-dump only). The debuggee keeps a long-due-time
@@ -36,11 +36,11 @@ public sealed class SpecializedInspectionTests
         Assert.Matches(@"[1-9]\d* timers", target.Sos("timerinfo").Text);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(ThreadPoolMatrix))]
     public async Task ThreadPool_ReportsWorkerStats(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // A parked work item has initialised the pool, so its worker stats are reportable.
@@ -49,7 +49,7 @@ public sealed class SpecializedInspectionTests
         pool.AssertContains("Workers Total");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task SyncBlk_ReportsInflatedMonitor(TestConfig config)
     {
@@ -68,7 +68,7 @@ public sealed class SpecializedInspectionTests
                 "https://github.com/dotnet/diagnostics/issues/5985: legacy DAC SyncBlock data is unavailable for macOS .NET 11 dumps.");
         }
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // The contended s_fatLock is inflated, so syncblk lists a held sync block (MonitorHeld > 0).
@@ -79,11 +79,11 @@ public sealed class SpecializedInspectionTests
             $"expected a held sync block:\n{sync.Text}");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(CoreRuntimeMatrix))]
     public async Task DumpAsync_ShowsSuspendedStateMachine(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // The SuspendedAsync state machine is parked at its await, so dumpasync finds it. (dumpasync walks

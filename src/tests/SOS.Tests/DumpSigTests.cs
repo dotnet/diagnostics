@@ -17,12 +17,12 @@ public sealed class DumpSigTests
 {
     public static TheoryData<TestConfig> Matrix => TestMatrices.CoreFramework([TargetCatalog.Scenarios]);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpSig_And_DumpSigElem(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         DumpObjResult holder = target.DumpObj(target.FindUniqueObject("FieldMarker"));

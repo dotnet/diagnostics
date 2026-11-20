@@ -14,11 +14,11 @@ public sealed class DbgEngHostingTests
     public static TheoryData<TestConfig> ModulePathMatrix => TestConfig.BuildMatrix(
         [TargetCatalog.Scenarios], Flavor.Core, Host.Cdb, coreVersion: CoreVersion.All, dac: Dac.Legacy);
 
-    [WindowsTheory]
+    [WindowsDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Sos_ReusesCoreClrHost(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("sethostruntime").AssertContains("Using .NET Core runtime to host the managed SOS code");
@@ -26,11 +26,11 @@ public sealed class DbgEngHostingTests
         target.ClrModules().SingleByName(TargetCatalog.Get(TargetCatalog.Scenarios).ModuleFor(config.Flavor));
     }
 
-    [WindowsTheory]
+    [WindowsDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(ModulePathMatrix))]
     public async Task EngineLoadsDebuggerModulesFromSelectedLayout(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         Assert.Contains(

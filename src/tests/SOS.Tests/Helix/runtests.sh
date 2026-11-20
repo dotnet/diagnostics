@@ -107,13 +107,6 @@ if [[ ${#test_dlls[@]} -ne 1 || ! -f "${test_dlls[0]}" ]]; then
 fi
 test_dll="${test_dlls[0]}"
 
-max_parallel_threads=""
-if [[ "$(uname -s)" == "Darwin" ]]; then
-  max_parallel_threads=2
-elif [[ "$rid" == linux-musl-* ]]; then
-  max_parallel_threads=1
-fi
-
 prepare_dotnet_root()
 {
   dotnet_root="${HELIX_CORRELATION_PAYLOAD:?HELIX_CORRELATION_PAYLOAD is required}/dotnet-cli"
@@ -281,13 +274,8 @@ run_tests()
 }
 
 set +e
-if [[ -n "$max_parallel_threads" ]]; then
-  run_tests --max-threads "$max_parallel_threads" 2>&1 | tee "$log"
-  exit_code=${PIPESTATUS[0]}
-else
-  run_tests 2>&1 | tee "$log"
-  exit_code=${PIPESTATUS[0]}
-fi
+run_tests 2>&1 | tee "$log"
+exit_code=${PIPESTATUS[0]}
 set -e
 
 if [[ "$tool_layout" == "Packaged" && -f "$SOSHARNESS_TOOL_ROOT/layout.json" ]]; then

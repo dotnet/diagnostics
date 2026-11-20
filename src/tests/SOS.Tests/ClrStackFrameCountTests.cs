@@ -28,11 +28,11 @@ public sealed class ClrStackFrameCountTests
     public static TheoryData<TestConfig> ICorDebugMatrix { get; } =
         TestMatrices.StackWalk(s_targets, flavor: Flavor.Core | Flavor.SingleFile);
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_FrameCount(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
         using IDisposable session = target.AcquireDebuggerSession();
 
@@ -51,13 +51,13 @@ public sealed class ClrStackFrameCountTests
         AssertSameFrames(full, over, full.Length);
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(ICorDebugMatrix))]
     public async Task ClrStack_ICorDebugFrameCount(TestConfig config)
     {
         SOSTestSkips.SkipICorDebugFrameCount(config);
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
         using IDisposable session = target.AcquireDebuggerSession();
 

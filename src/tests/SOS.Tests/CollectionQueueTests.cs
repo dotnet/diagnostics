@@ -15,11 +15,11 @@ public sealed class CollectionQueueTests
 {
     public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task Dcq_DumpsConcurrentQueueContents(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong queue = target.FirstObjectOfExactType("System.Collections.Concurrent.ConcurrentQueue<System.Int32>");
@@ -31,11 +31,11 @@ public sealed class CollectionQueueTests
         dcq.AssertContains("819");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task ThreadPoolQueue_ShowsQueueStructure(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("threadpoolqueue").AssertContains("work item queue");

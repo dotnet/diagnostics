@@ -20,11 +20,11 @@ public sealed class ClrStackAllThreadsTests
 
     public static TheoryData<TestConfig> Matrix { get; } = TestMatrices.StackWalk([TargetCatalog.Scenarios]);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopAllThreads)]
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_AllThreads(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopAllThreads);
         target.GoToStopPoint(TargetCatalog.StopAllThreads);
 
         IReadOnlyList<TargetExtensions.ThreadStack> threads = target.ClrstackAllThreads();

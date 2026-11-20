@@ -18,11 +18,11 @@ public sealed class ModuleResolveTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Name2EE_And_Token2EE_AgreeOnType(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         string moduleName = TargetCatalog.Get(TargetCatalog.Scenarios).ModuleFor(config.Flavor);
@@ -49,11 +49,11 @@ public sealed class ModuleResolveTests
         Assert.Equal("ThinLockMarker", named.Name);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Name2EE_ResolvesMethodOnStack(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         string moduleName = TargetCatalog.Get(TargetCatalog.Scenarios).ModuleFor(config.Flavor);

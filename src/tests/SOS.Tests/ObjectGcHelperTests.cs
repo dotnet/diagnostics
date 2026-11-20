@@ -30,12 +30,12 @@ public sealed class ObjectGcHelperTests
     // drop the pathologically slow Framework rows rather than let the suite carry multi-minute tests.
     public static TheoryData<TestConfig> CdbMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core | Flavor.SingleFile, Host.Cdb);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpObj_Refs_ListsReferences(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong marker = target.FindUniqueObject("FieldMarker");
@@ -64,11 +64,11 @@ public sealed class ObjectGcHelperTests
         }
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task ListNearObj_ShowsNeighbours(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong marker = target.FindUniqueObject("FieldMarker");
@@ -77,21 +77,21 @@ public sealed class ObjectGcHelperTests
         Assert.Contains("FieldMarker", near.Text, StringComparison.Ordinal);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task VerifyObj_AcceptsGoodObject(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos($"verifyobj {target.FindUniqueObject("FieldMarker"):x}").AssertContains("is a valid object");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task FindAppDomain_ResolvesObjectDomain(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         SosOutput domain = target.Sos($"findappdomain {target.FindUniqueObject("FieldMarker"):x}");
@@ -99,12 +99,12 @@ public sealed class ObjectGcHelperTests
         domain.AssertContains("Name:");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(ObjectDataMatrix))]
     public async Task PathTo_TracesReferencePath(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong marker = target.FindUniqueObject("FieldMarker");
@@ -116,22 +116,22 @@ public sealed class ObjectGcHelperTests
         Assert.Contains("System.String", path.Text, StringComparison.Ordinal);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(CoreRuntimeMatrix))]
     public async Task DumpAlc_ResolvesDefaultLoadContext(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // AssemblyLoadContext is a .NET Core concept; the debuggee loads into the default ALC.
         target.Sos($"dumpalc {target.FindUniqueObject("FieldMarker"):x}").AssertContains("DefaultAssemblyLoadContext");
     }
 
-    [WindowsTheory]
+    [WindowsDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(CdbMatrix))]
     public async Task GcHandleLeaks_RunsHandleScan(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("gchandleleaks").AssertContains("GCHandle");
