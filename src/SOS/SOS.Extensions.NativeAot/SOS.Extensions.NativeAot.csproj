@@ -2,6 +2,9 @@
   <PropertyGroup>
     <TargetFramework>$(SOSNativeAotTargetFramework)</TargetFramework>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(TargetRid)</RuntimeIdentifier>
+    <TargetArchitecture Condition="'$(TargetArchitecture)' == ''">$(TargetArch)</TargetArchitecture>
+    <CrossBuild Condition="'$(CrossBuild)' == '' and '$(CROSSCOMPILE)' == '1'">true</CrossBuild>
+    <UseCommonLocateNativeCompilerTarget Condition="'$(TargetOS)' != 'Windows_NT' and '$(TargetOS)' != 'windows'">true</UseCommonLocateNativeCompilerTarget>
     <AssemblyName>SOS.Extensions.NativeAot</AssemblyName>
     <RootNamespace>SOS.Extensions.NativeAot</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -24,4 +27,7 @@
     </ItemGroup>
     <Copy SourceFiles="@(NativeAotBinaries)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false" />
   </Target>
+
+  <Import Project="$(RepositoryEngineeringDir)common\native\LocateNativeCompiler.targets"
+          Condition="'$(UseCommonLocateNativeCompilerTarget)' == 'true'" />
 </Project>

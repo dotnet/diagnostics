@@ -17,6 +17,13 @@
     <IsMuslBuild Condition="$(TargetRid.StartsWith('linux-musl-'))">true</IsMuslBuild>
   </PropertyGroup>
 
+  <ItemGroup Condition="'$(PackAsTool)' == 'true'">
+    <ProjectReference Include="$(RepoRoot)src\SOS\SOS.Extensions.NativeAot\SOS.Extensions.NativeAot.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true"
+                      GlobalPropertiesToRemove="TargetFramework" />
+  </ItemGroup>
+
   <!-- Each RID's required binaries are grouped in an ItemGroup guarded by SingleTargetRidPackage:
        when 'true' only the current $(TargetRid) is packed (a locally buildable single-rid package),
        otherwise the full cross-rid set is required and a missing artifact is intentionally a pack
