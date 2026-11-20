@@ -52,10 +52,9 @@ Token2EE
 
 Examining the GC history           Other
 -----------------------------      -----------------------------
-HistInit (histinit)                SetHostRuntime (sethostruntime)
-HistRoot (histroot)                SetSymbolServer (setsymbolserver, loadsymbols)
-HistObj  (histobj)                 SetClrPath (setclrpath)
-HistObjFind (histobjfind)          SOSFlush (sosflush)
+HistInit (histinit)                SetSymbolServer (setsymbolserver, loadsymbols)
+HistRoot (histroot)                SetClrPath (setclrpath)
+HistObj  (histobj)                 SOSFlush (sosflush)
 HistClear (histclear)              SOSStatus (sosstatus)
 HistStats (histstats)              FAQ
                                    Help (soshelp)
@@ -1633,38 +1632,6 @@ HistStats
 Displays per-GC counts of promote and relocate messages reconstructed from the
 stress log, then reports any root that was promoted or relocated more than once
 within a single GC. Run HistInit first.
-\\
-
-COMMAND: sethostruntime.
-SetHostRuntime [-c][-netcore] [-none] [-clear] <runtime-directory>
-
--c, -netcore - switch to hosting on the .NET Core runtime
--none        - disable hosting managed code (for testing).
--clear       - clear the .NET Core host runtime path.
--major       - set the .NET Core's runtime version (used with the <runtime-directory> argument).
-
-This command sets the path to the .NET Core runtime to use to host the managed 
-code that runs as part of SOS in the debugger (lldb). The runtime needs
-to be at least version 6.0 or greater. If there are spaces in directory, it
-needs to be single-quoted (').
-
-Normally, SOS attempts to find an installed .NET Core runtime to run its
-managed code automatically but this command is available if it fails. The
-default is to use the same runtime (libcoreclr) being debugged. Use this
-command if the default runtime being debugged isn't working enough to run
-the SOS code or if the version is less than 6.0.
-
-If you received the following error message when running a SOS command, use
-this command to set the path to 6.0 or greater .NET Core runtime.
-
-    (lldb) clrstack
-    Error: Fail to initialize CoreCLR 80004005
-    ClrStack  failed
-
-    (lldb) sethostruntime -major 6 /usr/share/dotnet/shared/Microsoft.NETCore.App/6.0.30
-
-You can use the "dotnet --info" in a command shell to find the path of an installed
-.NET Core runtime.
 \\
 
 COMMAND: sosstatus.

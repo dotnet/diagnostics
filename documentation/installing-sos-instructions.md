@@ -60,7 +60,7 @@ Now any time you run lldb, SOS will automatically be loaded and the symbol downl
 
     Examining the GC history           Other
     -----------------------------      -----------------------------
-    HistInit (histinit)                SetHostRuntime (sethostruntime)
+    HistInit (histinit)
     HistRoot (histroot)                SetSymbolServer (setsymbolserver, loadsymbols)
     HistObj  (histobj)                 FAQ
     HistObjFind (histobjfind)          SOSFlush

@@ -57,7 +57,7 @@ namespace SOS.Hosting
             string imagePath,
             uint imageTimestamp,
             uint imageSize,
-            byte[] mvid,
+            IntPtr mvid,
             uint mdRva,
             uint flags,
             uint bufferSize,

@@ -37,7 +37,7 @@ public sealed class LiveTarget : Target
 
     internal LiveTarget(Host hostKind, TargetDefinition definition, Flavor flavor, string exePath,
                         CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,
-                        HostRuntime hostRuntime = HostRuntime.Managed, GcType gcType = GcType.Workstation)
+                        GcType gcType = GcType.Workstation)
         : base(hostKind, definition.Name, flavor)
     {
         _definition = definition;
@@ -60,7 +60,7 @@ public sealed class LiveTarget : Target
                 environment["DOTNET_GCDynamicAdaptationMode"] = "0";
             }
 
-            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac, hostRuntime, environment);
+            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac, environment);
         }
         catch
         {

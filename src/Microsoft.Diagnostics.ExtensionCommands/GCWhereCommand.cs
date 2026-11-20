@@ -43,9 +43,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return;
             }
 
-            Column objectRangeColumn = Range.WithDml(Dml.DumpHeap).GetAppropriateWidth(segments.Select(r => r.ObjectRange));
-            Column committedColumn = Range.GetAppropriateWidth(segments.Select(r => r.CommittedMemory));
-            Column reservedColumn = Range.GetAppropriateWidth(segments.Select(r => r.ReservedMemory));
+            Column objectRangeColumn = ColumnKind.Range.WithDml(Dml.DumpHeap).GetAppropriateWidth(segments.Select(r => r.ObjectRange));
+            Column committedColumn = ColumnKind.Range.GetAppropriateWidth(segments.Select(r => r.CommittedMemory));
+            Column reservedColumn = ColumnKind.Range.GetAppropriateWidth(segments.Select(r => r.ReservedMemory));
             Table output = new(Console, Pointer, IntegerWithoutCommas.WithWidth(6).WithDml(Dml.DumpHeap), DumpHeap, Text.WithWidth(6), objectRangeColumn, committedColumn, reservedColumn);
             output.SetAlignment(Align.Left);
             output.WriteHeader("Address", "Heap", "Segment", "Generation", "Allocated", "Committed", "Reserved");

@@ -16,17 +16,8 @@
 
 interface IRuntime;
 
-enum HostRuntimeFlavor
-{
-    None,
-    NetCore,
-    NetFx
-};
-
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
-extern bool SetHostRuntime(HostRuntimeFlavor flavor, int major, int minor, LPCSTR hostRuntimeDirectory);
-extern void GetHostRuntime(HostRuntimeFlavor& flavor, int& major, int& minor, LPCSTR& hostRuntimeDirectory);
 extern bool GetAbsolutePath(const char* path, std::string& absolutePath);
 extern const std::string GetFileName(const std::string& filePath);
 

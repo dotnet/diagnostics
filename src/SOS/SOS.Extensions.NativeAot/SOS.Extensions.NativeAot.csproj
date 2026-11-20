@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(SOSNativeAotTargetFramework)</TargetFramework>
+    <AssemblyName>SOS.Extensions.NativeAot</AssemblyName>
+    <RootNamespace>SOS.Extensions.NativeAot</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <NativeLib>Shared</NativeLib>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <NeedsPublishing>true</NeedsPublishing>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SOS.Extensions\SOS.Extensions.csproj" />
+  </ItemGroup>
+
+  <Target Name="InstallNativeAotLibrary" AfterTargets="Publish">
+    <ItemGroup>
+      <NativeAotBinaries Include="$(PublishDir)$(AssemblyName).*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(NativeAotBinaries)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false" />
+  </Target>
+</Project>

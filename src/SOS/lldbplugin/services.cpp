@@ -2371,7 +2371,7 @@ public:
         IHostServices* hostservices = GetHostServices();
         if (hostservices == nullptr)
         {
-            g_services->Output(DEBUG_OUTPUT_ERROR, "Unrecognized command '%s' because managed hosting failed or was disabled. See sethostruntime command for details.\n", m_commandName);
+            g_services->Output(DEBUG_OUTPUT_ERROR, "Unrecognized command '%s' because NativeAOT extension initialization failed.\n", m_commandName);
             result.SetStatus(lldb::eReturnStatusFailed);
             return false;
         }
