@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.TestHelpers;
 
 namespace SOS.TestHarness;
 
@@ -488,6 +489,14 @@ public static class SnapshotStore
                 $"'{expectedRuntimeVersion ?? "<missing>"}'.");
         }
 
+        string dacDirectory = ToolPaths.SingleFileDacDirectory(coreVersion)
+            ?? throw new FileNotFoundException(
+                $"The matching DAC/DBI for the {tfm} single-file debuggee was not found.");
+        string dbiName = OperatingSystem.IsWindows() ? "mscordbi.dll"
+            : OperatingSystem.IsMacOS() ? "libmscordbi.dylib" : "libmscordbi.so";
+        SingleFileRuntimeValidator.Validate(exe,
+            Path.Combine(dacDirectory, ToolPaths.DacFileName),
+            Path.Combine(dacDirectory, dbiName));
         StageSingleFileDac(exe, coreVersion);
         return exe;
     }

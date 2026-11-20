@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\SOS\SOS.Extensions\SOS.Extensions.csproj" />
+    <ProjectReference Include="..\..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
     <!-- In-process dbgeng COM wrappers (IDebugClient/Control/...). Already a repo dependency. -->
     <PackageReference Include="Microsoft.Diagnostics.Runtime.Utilities" Version="$(MicrosoftDiagnosticsRuntimeUtilitiesVersion)" />
     <!-- xUnit v3 core (library variant, no executable enforcement) so the harness can expose

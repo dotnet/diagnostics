@@ -43,6 +43,78 @@ namespace Microsoft.Diagnostics
 
         public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", null);
 
+        public static IEnumerable<object[]> SingleFileConfigurations =>
+            Configurations.Where(configuration => ((TestConfiguration)configuration[0]).PublishSingleFile);
+
+        [Theory(SkipTestWithoutData = true), MemberData(nameof(SingleFileConfigurations))]
+        public async Task SingleFileRuntimeIdentity(TestConfiguration config)
+        {
+            DebuggeeConfiguration debuggee = await DebuggeeCompiler.Execute(config, config.DebuggeeName(), Output);
+            InvalidDataException dacMismatch = Assert.Throws<InvalidDataException>(() =>
+                SingleFileRuntimeValidator.Validate(debuggee.BinaryExePath, config.DbiModulePath(), config.DbiModulePath()));
+            Assert.Contains("Single-file runtime identity mismatch", dacMismatch.Message);
+            Assert.Contains(config.DbiModulePath(), dacMismatch.Message);
+
+            InvalidDataException dbiMismatch = Assert.Throws<InvalidDataException>(() =>
+                SingleFileRuntimeValidator.Validate(debuggee.BinaryExePath, config.DacModulePath(), config.RuntimeModulePath()));
+            Assert.Contains("Single-file runtime identity mismatch", dbiMismatch.Message);
+            Assert.Contains(config.RuntimeModulePath(), dbiMismatch.Message);
+
+            Assert.Throws<FileNotFoundException>(() =>
+                SingleFileRuntimeValidator.Validate(debuggee.BinaryExePath, null, config.DbiModulePath()));
+            Assert.Throws<FileNotFoundException>(() =>
+                SingleFileRuntimeValidator.Validate(debuggee.BinaryExePath, config.DacModulePath(), null));
+        }
+
+        [Theory]
+        [InlineData("11.0.1", "11.0.1", "osx-arm64", true, false, false, true, false)]
+        [InlineData("11.0.1", "11.0.1", "linux-musl-x64", true, false, false, true, true)]
+        [InlineData("10.0.10", "11.0.1", "osx-arm64", true, false, false, false, true)]
+        [InlineData("11.0.1", "11.0.1", "osx-arm64", true, true, false, false, true)]
+        [InlineData("11.0.1", "11.0.1", "osx-arm64", true, false, true, false, true)]
+        [InlineData("11.0.1", "11.0.1", "osx-arm64", false, false, false, false, false)]
+        [InlineData(null, null, "osx-arm64", true, false, false, false, false)]
+        public void SingleFileCliHostPackSelection(
+            string runtime, string latest, string rid, bool singleFile, bool privateBuild, bool internalRelease, bool pinned, bool separatePackRoot)
+        {
+            string root = Path.Combine(Path.GetTempPath(), "single-file-pack-selection");
+            TestConfiguration config = new(new Dictionary<string, string>
+            {
+                ["TestProduct"] = "ProjectK",
+                ["CliPath"] = Path.Combine(root, "download", "dotnet"),
+                ["DebuggeeBuildRoot"] = Path.Combine(root, "build"),
+                ["DebuggeeSourceRoot"] = Path.Combine(root, "source"),
+                ["BuildProjectFramework"] = "net11.0",
+                ["BuildProjectRuntime"] = rid,
+                ["RuntimeFrameworkVersion"] = runtime,
+                ["RuntimeVersionLatest"] = latest,
+                ["PublishSingleFile"] = singleFile.ToString(),
+                ["PrivateBuildTesting"] = privateBuild.ToString(),
+                ["InternalReleaseTesting"] = internalRelease.ToString(),
+                ["SingleFileHostPackRoot"] = separatePackRoot ? Path.Combine(root, "musl-sdk", "packs") : null,
+            });
+            CliDebuggeeCompiler compiler = new(config, "SimpleDebuggee");
+            string dotNetPath = Path.Combine(root, "target-sdk", "dotnet");
+            CsprojBuildDebuggeeTestStep step = Assert.IsType<CsprojBuildDebuggeeTestStep>(
+                compiler.ConfigureDotNetBuildDebuggeeTask(config, dotNetPath, null, "SimpleDebuggee"));
+
+            Assert.Equal(pinned, step.BuildProperties.ContainsKey("NetCoreTargetingPackRoot"));
+            Assert.Equal(pinned, step.BuildProperties.ContainsKey("EnableAppHostPackDownload"));
+            Assert.Equal(rid, step.BuildProperties["RuntimeIdentifier"]);
+            if (pinned)
+            {
+                string expectedRoot = separatePackRoot
+                    ? Path.Combine(root, "musl-sdk", "packs")
+                    : Path.Combine(root, "target-sdk", "packs");
+                Assert.Equal(expectedRoot, step.BuildProperties["NetCoreTargetingPackRoot"]);
+                Assert.Equal("false", step.BuildProperties["EnableAppHostPackDownload"]);
+            }
+            if (singleFile && runtime is not null)
+            {
+                Assert.Equal(runtime, step.BuildProperties["RuntimeFrameworkVersion"]);
+            }
+        }
+
         [Fact]
         public void VerifyCoreProviderLibrarySignature()
         {

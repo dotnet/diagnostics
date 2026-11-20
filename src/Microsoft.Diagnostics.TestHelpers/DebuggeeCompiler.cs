@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -33,7 +34,21 @@ namespace Microsoft.Diagnostics.TestHelpers
                 default:
                     throw new Exception("Invalid DebuggeeBuildProcess configuration value. Expected 'prebuilt', actual \'" + config.DebuggeeBuildProcess + "\'");
             }
-            return await compiler.Execute(output).ConfigureAwait(false);
+            DebuggeeConfiguration debuggee = await compiler.Execute(output).ConfigureAwait(false);
+            if (config.PublishSingleFile)
+            {
+                string suffix = OS.Kind == OSKind.Windows ? ".dll" : OS.Kind == OSKind.OSX ? ".dylib" : ".so";
+                string prefix = OS.Kind == OSKind.Windows ? "" : "lib";
+                string dacPath = TestConfiguration.MakeCanonicalPath(config.GetValue("DacModulePath"));
+                string dbiPath = TestConfiguration.MakeCanonicalPath(config.GetValue("DbiModulePath"));
+                if (!string.IsNullOrEmpty(config.RuntimeSymbolsPath))
+                {
+                    dacPath ??= Path.Combine(config.RuntimeSymbolsPath, prefix + "mscordaccore" + suffix);
+                    dbiPath ??= Path.Combine(config.RuntimeSymbolsPath, prefix + "mscordbi" + suffix);
+                }
+                SingleFileRuntimeValidator.Validate(debuggee.BinaryExePath, dacPath, dbiPath);
+            }
+            return debuggee;
         }
     }
 
