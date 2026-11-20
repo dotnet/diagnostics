@@ -5,15 +5,9 @@ include(configure.cmake)
 include_directories(${ROOT_DIR}/src/SOS/inc)
 
 set(SOURCES
-    hostcoreclr.cpp
+    hostnativeaot.cpp
     extensions.cpp
 )
-
-if(WIN32 AND NOT CLR_CMAKE_HOST_ARCH_ARM64 AND NOT CLR_CMAKE_HOST_ARCH_ARM)
-    list(APPEND SOURCES
-        hostdesktop.cpp
-    )
-endif(WIN32 AND NOT CLR_CMAKE_HOST_ARCH_ARM64 AND NOT CLR_CMAKE_HOST_ARCH_ARM)
 
 if(CLR_CMAKE_HOST_UNIX)
     add_definitions(-DHOST_UNIX)

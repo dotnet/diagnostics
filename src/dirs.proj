@@ -6,6 +6,8 @@
 
     <!-- SOS -->
     <ProjectReference Include="SOS/*/*.csproj" />
+    <ProjectReference Remove="SOS/SOS.Extensions.NativeAot/SOS.Extensions.NativeAot.csproj" />
+    <ProjectReference Include="SOS/SOS.Extensions.NativeAot/publish.proj" />
 
     <ProjectReference Include="Microsoft.Diagnostics.DebugServices/Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="Microsoft.Diagnostics.DebugServices.Implementation/Microsoft.Diagnostics.DebugServices.Implementation.csproj" />

@@ -65,7 +65,6 @@ public static class DbgEngCapturer
 
             control.WaitForEvent(TimeSpan.FromSeconds(60)); // initial loader break
             Run($".load {ToolPaths.SosPath}");
-            DbgEngSosHost.Initialize();
 
             // For desktop, the managed module is the EXE itself (e.g. GcPromotion.exe), not the .dll.
             string bpmdModule = Path.GetFileName(exePath);

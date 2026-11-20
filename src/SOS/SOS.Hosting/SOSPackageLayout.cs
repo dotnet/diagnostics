@@ -11,23 +11,11 @@ namespace Microsoft.Diagnostics.Shared;
 /// Describes the on-disk layout of the diagnostics tool packages (dotnet-dump,
 /// dotnet-sos, SOS.Package, dbgshim) relative to <see cref="AppContext.BaseDirectory"/>.
 ///
-/// A package contains two kinds of binaries that are loaded by the analyzer host:
-/// <list type="bullet">
-/// <item><description>
-/// Native binaries that are loaded directly into the analyzer host process and
-/// therefore must match the host's OS and processor architecture (sos.dll /
-/// libsosplugin, <c>mscordaccore_universal</c>, <c>DiaSymReader</c>, …). They live
-/// in a host-specific subfolder of the managed assembly directory (e.g.
-/// <c>tools/&lt;tfm&gt;/any/win-x64/</c>). The folder name is the analyzer host's
-/// runtime identifier — that's the layout the build emits.
-/// </description></item>
-/// <item><description>
-/// SOS managed extension assemblies that <c>dotnet-sos install</c> copies into the
-/// SOS install directory (Microsoft.Diagnostics.ExtensionCommands.dll, etc.). They
-/// live in target-framework subfolders under the <c>lib/</c> sibling directory and
-/// are not OS/arch specific.
-/// </description></item>
-/// </list>
+/// Native binaries loaded into the analyzer host process must match the host's OS
+/// and processor architecture. They live in a host-specific subfolder of the managed
+/// assembly directory (for example, <c>tools/&lt;tfm&gt;/any/win-x64/</c>). The
+/// folder contains native SOS, its self-contained NativeAOT extension library, and
+/// supporting native assets.
 ///
 /// This file is compile-included by <c>SOS.Hosting</c> and <c>SOS.InstallHelper</c>
 /// so they agree on the managed tool package layout. Native debugger hosts such as
@@ -52,13 +40,6 @@ internal static class SOSPackageLayout
     /// </summary>
     public static string GetNativeBinariesDirectory(Architecture? architecture = null)
         => Path.Combine(s_packageBaseDirectory, GetHostNativeBinariesFolderName(architecture));
-
-    /// <summary>
-    /// Returns the directory containing the target-framework-specific SOS managed
-    /// extension assembly directories for this package.
-    /// </summary>
-    public static string GetManagedBinariesDirectory()
-        => Path.Combine(s_packageBaseDirectory, "lib");
 
     /// <summary>
     /// The package-relative subfolder for native binaries targeting the current host

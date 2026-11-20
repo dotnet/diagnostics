@@ -31,8 +31,7 @@ public sealed class DiagnosticCommandTests
     public static TheoryData<TestConfig> ClrmaMatrix => TestConfig.BuildMatrix(
         [TargetCatalog.Scenarios],
         Flavor.AllValid,
-        Host.Cdb | Host.DotnetDump,
-        hostRuntime: HostRuntime.AllValid);
+        Host.Cdb | Host.DotnetDump);
     public static TheoryData<TestConfig> ClrmaExceptionMatrix =>
         TestConfig.BuildMatrix([TargetCatalog.NestedException], Flavor.AllValid, Host.DotnetDump, dumpKind: DumpKind.All);
 

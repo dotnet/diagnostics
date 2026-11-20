@@ -13,7 +13,7 @@ HRESULT ExecuteManagedOnlyCommand(PCSTR commandName, PCSTR args)
     {
         return hostServices->DispatchCommand(commandName, args, /* displayCommandNotFound */ true);
     }
-    ExtErr("Unrecognized command '%s' because managed hosting failed or was disabled. See !sethostruntime command for details.\n", commandName);
+    ExtErr("Unrecognized command '%s' because NativeAOT extension initialization failed.\n", commandName);
     return E_NOTIMPL;
 }
 

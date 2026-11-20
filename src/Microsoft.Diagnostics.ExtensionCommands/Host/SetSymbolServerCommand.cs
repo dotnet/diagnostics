@@ -167,13 +167,6 @@ file structure that the core dump was generated.
 
 To clear the default cache run ""rm -r $HOME/.dotnet/symbolcache"" in a command shell.
 
-If you receive an error like the one below on a core dump, you need to set the .NET Core
-runtime with the ""sethostruntime"" command. Type ""soshelp sethostruntime"" for more details.
-
-    (lldb) setsymbolserver -ms
-    Error: Fail to initialize CoreCLR 80004005
-    SetSymbolServer -ms  failed
-
 The ""-loadsymbols"" option and the ""loadsymbol"" command alias attempts to download the native .NET
 Core symbol files. It is only useful for live sessions and not core dumps. This command needs to 
 be run before the lldb ""bt"" (stack trace) or the ""clrstack -f"" (dumps both managed and native

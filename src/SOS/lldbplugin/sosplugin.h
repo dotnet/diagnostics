@@ -27,9 +27,6 @@ sosCommandInitialize(lldb::SBDebugger debugger);
 bool
 setsostidCommandInitialize(lldb::SBDebugger debugger);
 
-bool
-sethostruntimeCommandInitialize(lldb::SBDebugger debugger);
-
 //-----------------------------------------------------------------------------------------
 // Extension helper class
 //-----------------------------------------------------------------------------------------

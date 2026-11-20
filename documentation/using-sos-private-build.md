@@ -21,7 +21,7 @@ In the attach scenario, we need to do things differently. We couldn't stop WinDB
 
 This will ensure you are using your own sos.dll, of course you might have a different full path to `sos.dll`.
 
-When deploying a private build, copy the complete output directory, including the `net462` and `net8.0` subdirectories, rather than just `sos.dll`. The .NET Framework hosting path requires `net462\SOS.FrameworkHost.dll`, which loads `SOS.Extensions.dll` and its dependencies in an isolated AppDomain. The domain is retained for the debugger process lifetime because native SOS holds managed callback pointers. Additional managed extensions must match the DebugServices contracts in the same SOS payload.
+When deploying a private build, copy `SOS.Extensions.NativeAot.dll` alongside `sos.dll`. The native SOS extension loads this self-contained NativeAOT library directly and does not require an installed .NET runtime.
 
 ## Linux
 

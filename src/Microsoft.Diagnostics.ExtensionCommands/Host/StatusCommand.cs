@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 
@@ -75,7 +76,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WriteLine($"-> {moduleType.FullName} ({moduleType.Assembly.GetName().Version})");
                 }
 
-                WriteLine($"Host runtime {RuntimeInformation.FrameworkDescription} on {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}");
+                string nativeAot = RuntimeFeature.IsDynamicCodeSupported ? string.Empty : " (NativeAOT)";
+                WriteLine($"Host runtime {RuntimeInformation.FrameworkDescription}{nativeAot} on {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}");
                 long memoryUsage = GC.GetTotalMemory(forceFullCollection: true);
                 WriteLine($"GC memory usage for managed SOS components: {memoryUsage:##,#} bytes");
             }

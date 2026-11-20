@@ -116,7 +116,6 @@ include_directories(${ROOT_DIR}/src/SOS/extensions)
 set(SOURCES
     sosplugin.cpp
     soscommand.cpp
-    sethostruntimecommand.cpp
     setsostidcommand.cpp
     services.cpp
 )

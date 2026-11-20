@@ -7,7 +7,6 @@ namespace SOS.TestHarness;
 internal interface IToolLayout
 {
     string SosDirectory { get; }
-    string SosAssemblyPath { get; }
     ToolCommand DotNetDump { get; }
     string DumpCacheDirectory { get; }
     string? CDacOverrideDirectory { get; }

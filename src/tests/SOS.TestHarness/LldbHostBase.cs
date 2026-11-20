@@ -13,9 +13,9 @@ namespace SOS.TestHarness;
 /// command as <c>runcommand &lt;cmd&gt;</c> so each one is delimited by a sentinel that also carries a real
 /// success bit (<c>&lt;END_COMMAND_OUTPUT&gt;</c> / <c>&lt;END_COMMAND_ERROR&gt;</c> from
 /// <c>SBCommandReturnObject.Succeeded()</c>). SOS itself is the native lldb plugin
-/// (<c>libsosplugin.so</c>/<c>.dylib</c>); its managed extension runs on the runtime named by
-/// <c>sethostruntime</c>. Derived hosts differ only in how they create the target (a core file vs. a
-/// launched process) and how they advance it.
+/// (<c>libsosplugin.so</c>/<c>.dylib</c>); its managed extension is provided by the NativeAOT library
+/// beside the plugin. Derived hosts differ only in how they create the target (a core file vs. a launched
+/// process) and how they advance it.
 /// </summary>
 public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
 {
@@ -117,7 +117,7 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
 
         if (OperatingSystem.IsMacOS())
         {
-            // Apple LLDB guards its Mach exception ports. The SOS hosting runtime must not replace them
+            // Apple LLDB guards its Mach exception ports. The NativeAOT SOS runtime must not replace them
             // or macOS terminates LLDB with EXC_GUARD (dotnet/diagnostics#4551).
             psi.Environment["PAL_MachExceptionMode"] = "7";
 
@@ -188,7 +188,7 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
             _stdin.WriteLine("runcommand " + command);
             _stdin.Flush();
             string outp = DrainToMarker(timeout, command);
-            AppendTrace($"\n>>> lldb={ToolPaths.LldbExe}\n>>> plugin={ToolPaths.LldbPluginPath}\n>>> rt={ToolPaths.HostRuntimeDirectory}\n(lldb) runcommand {command}\n{outp}\n");
+            AppendTrace($"\n>>> lldb={ToolPaths.LldbExe}\n>>> plugin={ToolPaths.LldbPluginPath}\n(lldb) runcommand {command}\n{outp}\n");
             return outp;
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException)
@@ -288,7 +288,6 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         sb.AppendLine($"commandInFlight={_commandInFlight ?? "<none>"}");
         sb.AppendLine($"ToolPaths.LldbExe={ToolPaths.LldbExe}");
         sb.AppendLine($"ToolPaths.LldbPluginPath={ToolPaths.LldbPluginPath}");
-        sb.AppendLine($"ToolPaths.HostRuntimeDirectory={ToolPaths.HostRuntimeDirectory}");
         sb.AppendLine($"crashDumpDirectory={HostDiagnostics.CrashDumpDirectory}");
         sb.AppendLine($"LLDB trace={s_trace ?? "<unset>"}");
 

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(SOSNativeAotTargetFramework)</TargetFramework>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(TargetRid)</RuntimeIdentifier>
+    <AssemblyName>SOS.Extensions.NativeAot</AssemblyName>
+    <RootNamespace>SOS.Extensions.NativeAot</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <NativeLib>Shared</NativeLib>
+    <UseNativeAotForComponents>true</UseNativeAotForComponents>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SOS.Extensions\SOS.Extensions.csproj" />
+  </ItemGroup>
+
+  <Import Project="$(RepoRoot)src\cdac\toolAot.targets" />
+</Project>

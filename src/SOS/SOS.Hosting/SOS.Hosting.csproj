@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>$(DesktopTargetFramework);$(NetCoreAppMinTargetFramework)</TargetFrameworks>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <AssemblyName>SOS.Hosting</AssemblyName>
     <NoWarn>$(NoWarn);1591;1701;IDE0060</NoWarn>
     <IsPackable>true</IsPackable>
@@ -12,7 +12,7 @@
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == '$(NetCoreAppMinTargetFramework)'">
+  <PropertyGroup>
     <NoWarn>$(NoWarn);SYSLIB1054;CA1416;CA2249</NoWarn>
   </PropertyGroup>
   
