@@ -28,6 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 return false;
             }
+
             try
             {
                 metrics = reader.Read<ClrEngineMetrics>(address);
