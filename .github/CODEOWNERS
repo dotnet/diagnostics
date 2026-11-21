@@ -7,3 +7,5 @@
 # have proper ownership.
 /src/                       @dotnet/dotnet-diag
 /documentation/             @dotnet/dotnet-diag
+/.github/workflows/         @dotnet/dotnet-diag
+/.github/CODEOWNERS          @dotnet/dotnet-diag
