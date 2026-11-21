@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.ExtensionCommands;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
 using SOS.Hosting;
@@ -105,7 +106,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             new SOSHostingModule().RegisterServices(registry);
             new AnalysisModule().RegisterServices(registry);
 
-            Assert.Equal(22, registry.Services.Count);
+            Assert.Equal(23, registry.Services.Count);
             Assert.Contains((ServiceScope.Global, typeof(IHostAssetResolver)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Global, typeof(IClrDataProcessActivator)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Global, typeof(SOSLibrary)), registry.Services.Keys);
@@ -113,6 +114,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Contains((ServiceScope.Target, typeof(TargetWrapper)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Runtime, typeof(RuntimeWrapper)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Target, typeof(NativeAddressHelper)), registry.Services.Keys);
+            Assert.Contains((ServiceScope.Target, typeof(Reader)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Runtime, typeof(ClrMDHelper)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Runtime, typeof(DumpHeapService)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Runtime, typeof(GCHistory)), registry.Services.Keys);
@@ -184,6 +186,22 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             Assert.Null(target.Services.GetService<NativeAddressHelper>());
             Assert.Null(runtime.GetService<ClrMDHelper>());
+            target.Destroy();
+            host.ServiceContainer.DisposeServices();
+        }
+
+        [Fact]
+        public void AnalysisReaderRegistersAllTargetLayouts()
+        {
+            Host host = new(HostType.DotnetDump);
+            host.ServiceManager.RegisterModule(new AnalysisModule());
+            host.CreateServiceContainer();
+            TestTarget target = new(host);
+
+            Reader reader = target.Services.GetRequiredService<Reader>();
+
+            Assert.NotNull(reader.LayoutManager.GetLayout<SpecialDiagInfoHeader>());
+            Assert.NotNull(reader.LayoutManager.GetLayout<ClrEngineMetrics>());
             target.Destroy();
             host.ServiceContainer.DisposeServices();
         }
