@@ -142,9 +142,23 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public void HostInitializationRejectsInvalidAdditionalModules()
         {
             Assert.Equal("additionalModules", Assert.Throws<ArgumentNullException>(() =>
-                HostServices.Initialize("unused", additionalModules: null)).ParamName);
+                HostServices.InitializeWithModules("unused", additionalModules: null)).ParamName);
             Assert.Equal("additionalModules", Assert.Throws<ArgumentException>(() =>
-                HostServices.Initialize("unused", new IDiagnosticsModule[] { null })).ParamName);
+                HostServices.InitializeWithModules("unused", new IDiagnosticsModule[] { null })).ParamName);
+        }
+
+        [Fact]
+        public void HostInitializationPreservesReflectionBoundSignatures()
+        {
+            MethodInfo initialize = Assert.Single(
+                typeof(HostServices).GetMethods(BindingFlags.Public | BindingFlags.Static),
+                method => method.Name == nameof(HostServices.Initialize));
+            Assert.Equal(new[] { typeof(string) }, initialize.GetParameters().Select(parameter => parameter.ParameterType));
+            Assert.NotNull(typeof(HostServices).GetConstructor(
+                BindingFlags.NonPublic | BindingFlags.Instance,
+                binder: null,
+                new[] { typeof(string), typeof(IntPtr) },
+                modifiers: null));
         }
 
         [Fact]

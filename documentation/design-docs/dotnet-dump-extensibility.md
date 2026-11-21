@@ -113,7 +113,7 @@ The host is the debugger or program the command and the infrastructure runs on. 
 
 Each contributing assembly has one registration file containing an `IDiagnosticsModule` implementation. `CoreModule`, `SOSHostingModule`, and `AnalysisModule` contain the built-in service and command registrations. `Host` explicitly registers the core module; dotnet-dump and SOS.Extensions each directly register native SOS hosting before managed analysis, preserving command fallback order. Dotnet-dump registers its host-specific SOS dispatch and exit commands together after module commands so its host commands take precedence over contributed commands with the same names or aliases.
 
-Applications that compile additional assemblies into their host explicitly construct and register their modules at the composition root before creating the global service container. Native debugger hosts pass additional modules through `HostServices.Initialize`; managed hosts call `ServiceManager.RegisterModule` directly. The host then calls `ServiceManager.RegisterCommands` to register commands from those same instances. Registration does not scan assemblies, attributes, or types. Runtime extension DLL discovery and loading have been removed: `DOTNET_DIAGNOSTIC_EXTENSIONS` and the `extensions` subdirectory are no longer used.
+Applications that compile additional assemblies into their host explicitly construct and register their modules at the composition root before creating the global service container. Native debugger hosts pass additional modules through `HostServices.InitializeWithModules`; managed hosts call `ServiceManager.RegisterModule` directly. The host then calls `ServiceManager.RegisterCommands` to register commands from those same instances. Registration does not scan assemblies, attributes, or types. Runtime extension DLL discovery and loading have been removed: `DOTNET_DIAGNOSTIC_EXTENSIONS` and the `extensions` subdirectory are no longer used.
 
 #### IHost
 
@@ -191,10 +191,10 @@ host.ServiceManager.RegisterCommands(commandService);
 
 Direct module registration, command registration, and service finalization are public startup operations on `ServiceManager`; hosts do not require friend access.
 
-NativeAOT applications must reference each contributing assembly and pass its module instance from their managed entry point so the compiler includes and retains it. Native debugger hosts call the `HostServices.Initialize` overload that accepts additional modules; the default entry point passes none:
+NativeAOT applications must reference each contributing assembly and pass its module instance from their managed entry point so the compiler includes and retains it. Native debugger hosts call `HostServices.InitializeWithModules`; the reflection-bound `HostServices.Initialize(string)` entry point passes none and must remain the only method with that name:
 
 ```csharp
-return HostServices.Initialize(extensionPath, new IDiagnosticsModule[] { new MyModule() });
+return HostServices.InitializeWithModules(extensionPath, new IDiagnosticsModule[] { new MyModule() });
 ```
 
 A module registered after service finalization is rejected. No DLLs are discovered or loaded from disk.

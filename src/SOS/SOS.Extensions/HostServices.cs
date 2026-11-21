@@ -102,7 +102,7 @@ namespace SOS.Extensions
         /// <returns>hresult</returns>
         public static int Initialize(
             [MarshalAs(UnmanagedType.LPStr)] string extensionPath)
-            => Initialize(extensionPath, Array.Empty<IDiagnosticsModule>());
+            => InitializeWithModules(extensionPath, Array.Empty<IDiagnosticsModule>());
 
         /// <summary>
         /// Initializes SOS with additional modules compiled into the host.
@@ -110,7 +110,7 @@ namespace SOS.Extensions
         /// <param name="extensionPath">Path and filename of native extensions to callback</param>
         /// <param name="additionalModules">Additional modules to register after the built-in modules</param>
         /// <returns>hresult</returns>
-        public static int Initialize(
+        public static int InitializeWithModules(
             [MarshalAs(UnmanagedType.LPStr)] string extensionPath,
             IEnumerable<IDiagnosticsModule> additionalModules)
         {
@@ -148,6 +148,11 @@ namespace SOS.Extensions
             Debug.Assert(Instance == null);
             Instance = new HostServices(extensionPath, extensionLibrary, modules);
             return initialializeCallback(Instance.IHostServices);
+        }
+
+        private HostServices(string extensionPath, IntPtr extensionsLibrary)
+            : this(extensionPath, extensionsLibrary, ImmutableArray<IDiagnosticsModule>.Empty)
+        {
         }
 
         private HostServices(string extensionPath, IntPtr extensionsLibrary, ImmutableArray<IDiagnosticsModule> additionalModules)
