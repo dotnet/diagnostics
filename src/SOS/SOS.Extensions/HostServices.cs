@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
@@ -43,6 +42,7 @@ namespace SOS.Extensions
         private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly HostWrapper _hostWrapper;
+        private readonly ImmutableArray<IDiagnosticsModule> _additionalModules;
         private ServiceContainer _serviceContainer;
         private ServiceContainer _servicesWithManagedOnlyFilter;
         private TargetFromDebuggerServices _targetFromDebuggerServices;
@@ -102,7 +102,31 @@ namespace SOS.Extensions
         /// <returns>hresult</returns>
         public static int Initialize(
             [MarshalAs(UnmanagedType.LPStr)] string extensionPath)
+            => InitializeWithModules(extensionPath, Array.Empty<IDiagnosticsModule>());
+
+        /// <summary>
+        /// Initializes SOS with additional modules compiled into the host.
+        /// </summary>
+        /// <param name="extensionPath">Path and filename of native extensions to callback</param>
+        /// <param name="additionalModules">Additional modules to register after the built-in modules</param>
+        /// <returns>hresult</returns>
+        public static int InitializeWithModules(
+            [MarshalAs(UnmanagedType.LPStr)] string extensionPath,
+            IEnumerable<IDiagnosticsModule> additionalModules)
         {
+            if (additionalModules is null)
+            {
+                throw new ArgumentNullException(nameof(additionalModules));
+            }
+            ImmutableArray<IDiagnosticsModule> modules = additionalModules.ToImmutableArray();
+            foreach (IDiagnosticsModule module in modules)
+            {
+                if (module is null)
+                {
+                    throw new ArgumentException("Additional modules must not contain null.", nameof(additionalModules));
+                }
+            }
+
             IntPtr extensionLibrary = default;
             try
             {
@@ -122,18 +146,23 @@ namespace SOS.Extensions
                 return HResult.E_FAIL;
             }
             Debug.Assert(Instance == null);
-            Instance = new HostServices(extensionPath, extensionLibrary);
+            Instance = new HostServices(extensionPath, extensionLibrary, modules);
             return initialializeCallback(Instance.IHostServices);
         }
 
         private HostServices(string extensionPath, IntPtr extensionsLibrary)
+            : this(extensionPath, extensionsLibrary, ImmutableArray<IDiagnosticsModule>.Empty)
+        {
+        }
+
+        private HostServices(string extensionPath, IntPtr extensionsLibrary, ImmutableArray<IDiagnosticsModule> additionalModules)
         {
             SOSPath = Path.GetDirectoryName(extensionPath);
             SOSHandle = extensionsLibrary;
+            _additionalModules = additionalModules;
 
             _host = new HostForHostServices(this);
             _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!sos" : null);
-            _host.ServiceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
 
             _host.OnTargetCreate.Register((target) => {
                 target.OnDestroyEvent.Register(() => {
@@ -217,24 +246,18 @@ namespace SOS.Extensions
                 FileLoggingConsoleService fileLoggingConsoleService = new(consoleService);
                 DiagnosticLoggingService.Instance.SetConsole(consoleService, fileLoggingConsoleService);
 
-                // Register all the services and commands in the SOS.Extensions (this) assembly
-                _host.ServiceManager.RegisterAssembly(typeof(HostServices).Assembly);
+                // Register the default modules
+                _host.ServiceManager.RegisterModule(new SOSHostingModule());
+                _host.ServiceManager.RegisterModule(new AnalysisModule());
 
-                // Register all the services and commands in the SOS.Hosting assembly
-                _host.ServiceManager.RegisterAssembly(typeof(SOSHost).Assembly);
+                foreach (IDiagnosticsModule module in _additionalModules)
+                {
+                    _host.ServiceManager.RegisterModule(module);
+                }
 
-                // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
-                _host.ServiceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
-
-                // Display any extension assembly loads on console
-                _host.ServiceManager.NotifyExtensionLoad.Register((Assembly assembly) => fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
-                _host.ServiceManager.NotifyExtensionLoadFailure.Register((Exception ex) => fileLoggingConsoleService.WriteLine(ex.Message));
-
-                // Load any extra extensions in the search path
-                _host.ServiceManager.LoadExtensions();
-
-                // Loading extensions or adding service factories not allowed after this point.
+                // Adding service factories is not allowed after this point.
                 ServiceContainer serviceContainer = _host.CreateServiceContainer();
+                _host.ServiceManager.RegisterCommands(_commandService);
                 _serviceContainer = serviceContainer;
 
                 // Add all the global services to the global service container

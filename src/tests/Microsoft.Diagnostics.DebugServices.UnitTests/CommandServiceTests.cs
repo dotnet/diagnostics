@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.ExtensionCommands;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 
@@ -41,6 +43,42 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         void IDisposable.Dispose() => Trace.Listeners.Remove(ListenerName);
 
+        [Fact]
+        public void AddCommandsCreatesActivatorFactoryLazily()
+        {
+            CommandService commands = new();
+
+            commands.AddCommands<AmbiguousConstructorCommand>();
+
+            Assert.Contains(commands.Commands, command => command.name == "ambiguousconstructor");
+        }
+
+        [Theory, MemberData(nameof(GetConfiguration))]
+        public void RuntimeCommandConstructorsInitializeInheritedDependencies(TestConfiguration config)
+        {
+            if (OS.IsAlpine)
+            {
+                Assert.Skip("Not supported on Alpine Linux");
+            }
+
+            using TestDump testDump = new(config);
+            testDump.ServiceContainer.AddService<IConsoleService>(new CaptureConsoleService());
+            IRuntime runtime = testDump.Target.Services.GetRequiredService<IRuntimeService>().EnumerateRuntimes().First();
+            ServiceContainer services = new(runtime.Services);
+            ClrRuntime clrRuntime = services.GetRequiredService<ClrRuntime>();
+            ClrMDHelper helper = ClrMDHelper.TryCreate(services);
+            Assert.NotNull(helper);
+            services.AddService(helper);
+
+            DumpAsyncCommand asyncCommand = new(services);
+            TimersCommand timersCommand = new(services);
+
+            Assert.Same(clrRuntime, asyncCommand.Runtime);
+            Assert.Same(helper, timersCommand.Helper);
+            Assert.True(ClrRuntimeCommandBase.FilterInvoke(services));
+            Assert.True(ClrMDHelperCommandBase.FilterInvoke(services));
+        }
+
         [Theory, MemberData(nameof(GetConfiguration))]
         public void CommandServiceTest1(TestConfiguration config)
         {
@@ -50,7 +88,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             testDump.ServiceContainer.AddService<IConsoleService>(consoleService);
 
             // Add all the test commands
-            testDump.CommandService.AddCommands(typeof(TestCommand1).Assembly);
+            testDump.CommandService.AddCommands<RunTestsCommand>();
+            testDump.CommandService.AddCommands<TestCommand1>();
+            testDump.CommandService.AddCommands<TestCommand2>();
+            testDump.CommandService.AddCommands<TestCommand3>();
+            testDump.CommandService.AddCommands<WriteTestDataCommand>();
 
             // See if the test commands exists
             Assert.Contains(testDump.CommandService.Commands, ((string name, string help, IEnumerable<string> aliases) cmd) => cmd.name == "testcommand");
@@ -122,6 +164,23 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.False(TestCommand1.Invoked);
             Assert.False(TestCommand2.Invoked);
             Assert.False(TestCommand3.Invoked);
+        }
+
+        [Command(Name = "ambiguousconstructor")]
+        private sealed class AmbiguousConstructorCommand
+        {
+            public AmbiguousConstructorCommand(IConsoleService console)
+            {
+            }
+
+            public AmbiguousConstructorCommand(IServiceProvider services)
+            {
+            }
+
+            [CommandInvoke]
+            public void Invoke()
+            {
+            }
         }
     }
 }

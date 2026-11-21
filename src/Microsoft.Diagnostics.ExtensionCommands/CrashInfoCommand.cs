@@ -13,17 +13,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "crashinfo", Help = "Displays the crash details that created the dump.")]
     public class CrashInfoCommand : CommandBase
     {
-        [ServiceImport(Optional = true)]
-        public ICrashInfoService CrashInfo { get; set; }
+        public CrashInfoCommand(IServiceProvider services, ICrashInfoService crashInfo = null, ICrashInfoModuleService crashInfoFactory = null)
+            : base(services)
+        {
+            CrashInfo = crashInfo;
+            CrashInfoFactory = crashInfoFactory;
+        }
 
-        [ServiceImport(Optional = true)]
-        public ICrashInfoModuleService CrashInfoFactory { get; set; }
+        public ICrashInfoService CrashInfo { get; }
+
+        public ICrashInfoModuleService CrashInfoFactory { get; }
 
         [Option(Name = "--moduleEnumerationScheme", Aliases = new string[] { "-e" }, Help = "Enables searching modules for the NativeAOT crashinfo data.  Default is None")]
         public ModuleEnumerationScheme ModuleEnumerationScheme { get; set; } = ModuleEnumerationScheme.None;
 
         [FilterInvoke(Message = "This command is only supported with dumps.")]
-        public static bool FilterInvoke([ServiceImport(Optional = true)] ICrashInfoModuleService crashInfoFactory) => crashInfoFactory != null;
+        public static bool FilterInvoke(IServiceProvider services) => services.GetService<ICrashInfoModuleService>() != null;
 
         public override void Invoke()
         {

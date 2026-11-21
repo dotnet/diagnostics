@@ -5,7 +5,7 @@ namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
     /// Discovers runtimes and captures their metadata without creating inspection runtimes.
-    /// Providers can be registered through ProviderExport or host service registration.
+    /// Providers are registered through host service registration.
     /// </summary>
     public interface IRuntimeDescriptionProvider
     {

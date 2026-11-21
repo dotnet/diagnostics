@@ -15,8 +15,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "traverseheap", Aliases = new[] { "TraverseHeap" }, Help = "Writes out heap information to a file in a format understood by the CLR Profiler.")]
     public class TraverseHeapCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public RootCacheService RootCache { get; set; }
+        public TraverseHeapCommand(IServiceProvider services, RootCacheService rootCache)
+            : base(services)
+        {
+            RootCache = rootCache;
+        }
+
+        public RootCacheService RootCache { get; }
 
         [Option(Name = "-xml")]
         public bool Xml { get; set; }

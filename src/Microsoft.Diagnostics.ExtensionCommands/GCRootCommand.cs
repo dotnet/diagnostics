@@ -15,20 +15,26 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "gcroot", Aliases = new[] { "GCRoot" }, Help = "Displays info about references (or roots) to an object at the specified address.")]
     public class GCRootCommand : ClrRuntimeCommandBase
     {
+        public GCRootCommand(IServiceProvider services, IMemoryService memory, RootCacheService rootCache, StaticVariableService staticVariables,
+            ManagedFileLineService fileLineService)
+            : base(services)
+        {
+            Memory = memory;
+            RootCache = rootCache;
+            StaticVariables = staticVariables;
+            FileLineService = fileLineService;
+        }
+
         private StringBuilder _lineBuilder = new(64);
         private ClrRoot _lastRoot;
 
-        [ServiceImport]
-        public IMemoryService Memory { get; set; }
+        public IMemoryService Memory { get; }
 
-        [ServiceImport]
-        public RootCacheService RootCache { get; set; }
+        public RootCacheService RootCache { get; }
 
-        [ServiceImport]
-        public StaticVariableService StaticVariables { get; set; }
+        public StaticVariableService StaticVariables { get; }
 
-        [ServiceImport]
-        public ManagedFileLineService FileLineService { get; set; }
+        public ManagedFileLineService FileLineService { get; }
 
         [Option(Name = "-gcgen", Help = "Implementation helper for !findroots.")]
         public int? AsGCGeneration { get; set; }

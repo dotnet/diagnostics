@@ -11,11 +11,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "help", Aliases = new string[] { "soshelp" }, Help = "Displays help for a command.")]
     public class HelpCommand : CommandBase
     {
+        public HelpCommand(IServiceProvider services, ICommandService commandService)
+            : base(services)
+        {
+            CommandService = commandService;
+        }
+
         [Argument(Help = "Command to find help.")]
         public string Command { get; set; }
 
-        [ServiceImport]
-        public ICommandService CommandService { get; set; }
+        public ICommandService CommandService { get; }
 
         public override void Invoke()
         {
