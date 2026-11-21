@@ -23,11 +23,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void ConstructorRegistrationValidatesPublicConstructorsImmediately()
+        public void ConstructorRegistrationValidatesPublicConstructorsOnFirstInvocation()
         {
             CommandService commands = new();
+            commands.AddCommands<NoPublicConstructorCommand>();
 
-            Assert.Throws<InvalidOperationException>(() => commands.AddCommands<CommandBase>());
+            Assert.Throws<InvalidOperationException>(() => commands.Execute("no-public-constructor", CreateServices()));
         }
 
         [Theory]
@@ -448,6 +449,19 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public sealed class MissingInvocationCommand
         {
             public void Invoke() { }
+        }
+
+        [Command(Name = "no-public-constructor")]
+        public sealed class NoPublicConstructorCommand
+        {
+            private NoPublicConstructorCommand()
+            {
+            }
+
+            [CommandInvoke]
+            public void Invoke()
+            {
+            }
         }
 
         [Command(Name = "multiple-invocations")]
