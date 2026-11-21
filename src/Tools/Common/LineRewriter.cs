@@ -7,7 +7,20 @@ namespace Microsoft.Internal.Common.Utils
 {
     internal sealed class LineRewriter
     {
-        public int LineToClear { get; set; }
+        private int _lineToClear;
+
+        public int LineToClear
+        {
+            get => _lineToClear;
+            set
+            {
+                if (_lineToClear != value)
+                {
+                    _lineToClear = value;
+                    _isSetCursorPositionSupported = null;
+                }
+            }
+        }
 
         private IConsole Console { get; }
 
@@ -44,7 +57,7 @@ namespace Microsoft.Internal.Common.Utils
 
         private void SystemConsoleLineRewriter() => Console.SetCursorPosition(0, LineToClear);
 
-        private static bool? _isSetCursorPositionSupported;
+        private bool? _isSetCursorPositionSupported;
         public bool IsRewriteConsoleLineSupported
         {
             get
