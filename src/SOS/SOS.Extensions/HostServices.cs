@@ -42,6 +42,7 @@ namespace SOS.Extensions
         private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly HostWrapper _hostWrapper;
+        private readonly ImmutableArray<IDiagnosticsModule> _additionalModules;
         private ServiceContainer _serviceContainer;
         private ServiceContainer _servicesWithManagedOnlyFilter;
         private TargetFromDebuggerServices _targetFromDebuggerServices;
@@ -101,7 +102,31 @@ namespace SOS.Extensions
         /// <returns>hresult</returns>
         public static int Initialize(
             [MarshalAs(UnmanagedType.LPStr)] string extensionPath)
+            => Initialize(extensionPath, Array.Empty<IDiagnosticsModule>());
+
+        /// <summary>
+        /// Initializes SOS with additional modules compiled into the host.
+        /// </summary>
+        /// <param name="extensionPath">Path and filename of native extensions to callback</param>
+        /// <param name="additionalModules">Additional modules to register after the built-in modules</param>
+        /// <returns>hresult</returns>
+        public static int Initialize(
+            [MarshalAs(UnmanagedType.LPStr)] string extensionPath,
+            IEnumerable<IDiagnosticsModule> additionalModules)
         {
+            if (additionalModules is null)
+            {
+                throw new ArgumentNullException(nameof(additionalModules));
+            }
+            ImmutableArray<IDiagnosticsModule> modules = additionalModules.ToImmutableArray();
+            foreach (IDiagnosticsModule module in modules)
+            {
+                if (module is null)
+                {
+                    throw new ArgumentException("Additional modules must not contain null.", nameof(additionalModules));
+                }
+            }
+
             IntPtr extensionLibrary = default;
             try
             {
@@ -121,14 +146,15 @@ namespace SOS.Extensions
                 return HResult.E_FAIL;
             }
             Debug.Assert(Instance == null);
-            Instance = new HostServices(extensionPath, extensionLibrary);
+            Instance = new HostServices(extensionPath, extensionLibrary, modules);
             return initialializeCallback(Instance.IHostServices);
         }
 
-        private HostServices(string extensionPath, IntPtr extensionsLibrary)
+        private HostServices(string extensionPath, IntPtr extensionsLibrary, ImmutableArray<IDiagnosticsModule> additionalModules)
         {
             SOSPath = Path.GetDirectoryName(extensionPath);
             SOSHandle = extensionsLibrary;
+            _additionalModules = additionalModules;
 
             _host = new HostForHostServices(this);
             _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!sos" : null);
@@ -219,8 +245,10 @@ namespace SOS.Extensions
                 _host.ServiceManager.RegisterModule(new SOSHostingModule());
                 _host.ServiceManager.RegisterModule(new AnalysisModule());
 
-                // Register additional diagnostic modules from the catalog
-                _host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
+                foreach (IDiagnosticsModule module in _additionalModules)
+                {
+                    _host.ServiceManager.RegisterModule(module);
+                }
 
                 // Adding service factories is not allowed after this point.
                 ServiceContainer serviceContainer = _host.CreateServiceContainer();

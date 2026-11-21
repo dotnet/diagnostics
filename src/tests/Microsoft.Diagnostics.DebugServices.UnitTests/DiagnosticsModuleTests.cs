@@ -4,26 +4,17 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using SOS.Extensions;
 using Xunit;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {
     public class DiagnosticsModuleTests
     {
-        [ModuleInitializer]
-        internal static void Initialize()
-        {
-            DiagnosticsModuleCatalog.Register(() => new TestModule());
-            DiagnosticsModuleCatalog.Register(() => new BetaOrderedModule());
-            DiagnosticsModuleCatalog.Register(() => new AlphaOrderedModule());
-        }
-
         [Theory]
         [InlineData(nameof(ServiceManager.RegisterModule))]
-        [InlineData(nameof(ServiceManager.RegisterModules))]
         [InlineData(nameof(ServiceManager.RegisterCommands))]
         [InlineData(nameof(ServiceManager.FinalizeServices))]
         public void StartupRegistrationMethodsArePublic(string methodName)
@@ -60,13 +51,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void ExplicitModulesAreNotRegisteredAgainFromTheCatalog()
+        public void ExplicitModulesAreRegisteredOncePerType()
         {
             ServiceManager manager = new();
             TestModule module = new();
             manager.RegisterModule(module);
             manager.RegisterModule(new TestModule());
-            manager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
             manager.FinalizeServices();
             ServiceContainer services = manager.CreateServiceContainer(ServiceScope.Global, null);
 
@@ -76,21 +66,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void BuiltInModulesAreNotAdvertisedThroughInitializers()
-        {
-            IDiagnosticsModule[] modules = DiagnosticsModuleCatalog.GetFactories().Select(factory => factory()).ToArray();
-
-            Assert.DoesNotContain(modules, module => module is CoreModule);
-            Assert.DoesNotContain(modules, module => module is SOS.Hosting.SOSHostingModule);
-            Assert.DoesNotContain(modules, module => module is Microsoft.Diagnostics.ExtensionCommands.AnalysisModule);
-        }
-
-        [Fact]
-        public void ModuleInitializersRegisterServicesAndOrderedProvidersOnce()
+        public void ExplicitModulesRegisterServicesProvidersAndCommands()
         {
             ServiceManager manager = new();
-            manager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
-            manager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
+            manager.RegisterModule(new TestModule());
+            manager.RegisterModule(new TestModule());
             manager.FinalizeServices();
             ServiceContainer services = manager.CreateServiceContainer(ServiceScope.Global, null);
             ModuleValue value = services.GetRequiredService<ModuleValue>();
@@ -115,8 +95,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             ServiceManager first = new();
             ServiceManager second = new();
-            first.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
-            second.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
+            first.RegisterModule(new TestModule());
+            second.RegisterModule(new TestModule());
             first.FinalizeServices();
             second.FinalizeServices();
             ServiceContainer firstServices = first.CreateServiceContainer(ServiceScope.Global, null);
@@ -129,7 +109,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void HostDoesNotRegisterCatalogAutomatically()
+        public void HostRegistersOnlyCoreModuleByDefault()
         {
             Host host = new(HostType.DotnetDump);
             ServiceContainer services = host.CreateServiceContainer();
@@ -140,15 +120,14 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             CommandService commands = new();
             host.ServiceManager.RegisterCommands(commands);
             Assert.Empty(commands.Commands);
-            Assert.Throws<InvalidOperationException>(() => host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories()));
             services.DisposeServices();
         }
 
         [Fact]
-        public void HostRegistersExplicitCatalogBeforeFinalization()
+        public void HostRegistersExplicitModulesBeforeFinalization()
         {
             Host host = new(HostType.DotnetDump);
-            host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
+            host.ServiceManager.RegisterModule(new TestModule());
             ServiceContainer services = host.CreateServiceContainer();
 
             Assert.NotNull(services.GetRequiredService<ModuleValue>());
@@ -156,100 +135,26 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             CommandService commands = new();
             host.ServiceManager.RegisterCommands(commands);
             Assert.Contains(commands.Commands, command => command.name == "module-probe");
-            Assert.Throws<InvalidOperationException>(() => host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories()));
             services.DisposeServices();
         }
 
         [Fact]
-        public void EmptyModuleListRegistersNoContributions()
+        public void HostInitializationRejectsInvalidAdditionalModules()
         {
-            ServiceManager manager = new();
-            manager.RegisterModules(Array.Empty<Func<IDiagnosticsModule>>());
-            manager.FinalizeServices();
-            ServiceContainer services = manager.CreateServiceContainer(ServiceScope.Global, null);
-
-            Assert.Null(services.GetService<ModuleValue>());
-        }
-
-        [Fact]
-        public void NullFactoryListIsRejected()
-        {
-            Assert.Equal("factories", Assert.Throws<ArgumentNullException>(() => new ServiceManager().RegisterModules(null)).ParamName);
-        }
-
-        [Fact]
-        public void NullFactoryIsRejected()
-        {
-            Assert.Equal("factories", Assert.Throws<ArgumentException>(() =>
-                new ServiceManager().RegisterModules(new Func<IDiagnosticsModule>[] { null })).ParamName);
-        }
-
-        [Fact]
-        public void NullModuleIsRejected()
-        {
-            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
-                new ServiceManager().RegisterModules(new Func<IDiagnosticsModule>[] { () => null }));
-
-            Assert.Equal("A diagnostics module factory returned null.", exception.Message);
-        }
-
-        [Fact]
-        public void CatalogRejectsNullAndDuplicateFactories()
-        {
-            Assert.Equal("factory", Assert.Throws<ArgumentNullException>(() =>
-                DiagnosticsModuleCatalog.Register<TestModule>(null)).ParamName);
-            Assert.Throws<ArgumentException>(() => DiagnosticsModuleCatalog.Register(() => new TestModule()));
-        }
-
-        [Fact]
-        public void CatalogOrderDoesNotDependOnInitializerOrder()
-        {
-            Type[] modules = DiagnosticsModuleCatalog.GetFactories().Select(factory => factory().GetType())
-                .Where(type => type == typeof(AlphaOrderedModule) || type == typeof(BetaOrderedModule))
-                .ToArray();
-
-            Assert.Equal(new[] { typeof(AlphaOrderedModule), typeof(BetaOrderedModule) }, modules);
-        }
-
-        [Fact]
-        public void ModuleFactoriesAreDeferredAndOnlyInvokedOncePerManager()
-        {
-            int creations = 0;
-            Func<IDiagnosticsModule>[] factories = {
-                () => {
-                    creations++;
-                    return PrivateConstructorModule.Create();
-                }
-            };
-            ServiceManager manager = new();
-            Assert.Equal(0, creations);
-
-            manager.RegisterModules(factories);
-            manager.RegisterModules(factories);
-
-            Assert.Equal(1, creations);
+            Assert.Equal("additionalModules", Assert.Throws<ArgumentNullException>(() =>
+                HostServices.Initialize("unused", additionalModules: null)).ParamName);
+            Assert.Equal("additionalModules", Assert.Throws<ArgumentException>(() =>
+                HostServices.Initialize("unused", new IDiagnosticsModule[] { null })).ParamName);
         }
 
         [Fact]
         public void ModuleRegistrationFailuresPropagate()
         {
             ServiceManager manager = new();
-            Func<IDiagnosticsModule>[] factories = { () => new ThrowingModule() };
 
-            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => manager.RegisterModules(factories));
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => manager.RegisterModule(new ThrowingModule()));
 
             Assert.Equal("Module registration failed", exception.Message);
-        }
-
-        [Fact]
-        public void ModuleConstructorFailuresPropagate()
-        {
-            ServiceManager manager = new();
-            Func<IDiagnosticsModule>[] factories = { () => new ThrowingConstructorModule() };
-
-            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => manager.RegisterModules(factories));
-
-            Assert.Equal("Module constructor failed", exception.Message);
         }
 
         [Fact]
@@ -266,7 +171,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public void CommandRegistrationFailuresPropagate()
         {
             ServiceManager manager = new();
-            manager.RegisterModules(new Func<IDiagnosticsModule>[] { () => new ThrowingCommandsModule() });
+            manager.RegisterModule(new ThrowingCommandsModule());
             manager.FinalizeServices();
 
             InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => manager.RegisterCommands(new CommandService()));
@@ -278,7 +183,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public void ModulesRegisterCommandsForEachCommandService()
         {
             ServiceManager manager = new();
-            manager.RegisterModules(new Func<IDiagnosticsModule>[] { () => new TestModule() });
+            manager.RegisterModule(new TestModule());
             manager.FinalizeServices();
             CommandService first = new();
             CommandService second = new();
@@ -347,27 +252,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             public string Name { get; }
         }
 
-        private abstract class EmptyModule : IDiagnosticsModule
-        {
-            public void RegisterServices(IServiceRegistry registry) { }
-            public void RegisterCommands(ICommandService commandService) { }
-        }
-
-        private sealed class AlphaOrderedModule : EmptyModule
-        {
-        }
-
-        private sealed class BetaOrderedModule : EmptyModule
-        {
-        }
-
-        private sealed class PrivateConstructorModule : EmptyModule
-        {
-            private PrivateConstructorModule() { }
-
-            public static PrivateConstructorModule Create() => new();
-        }
-
         public sealed class ThrowingModule : IDiagnosticsModule
         {
             public void RegisterServices(IServiceRegistry registry) => throw new InvalidOperationException("Module registration failed");
@@ -378,14 +262,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             public void RegisterServices(IServiceRegistry registry) { }
             public void RegisterCommands(ICommandService commandService) => throw new InvalidOperationException("Module command registration failed");
-        }
-
-        public sealed class ThrowingConstructorModule : IDiagnosticsModule
-        {
-            public ThrowingConstructorModule() => throw new InvalidOperationException("Module constructor failed");
-
-            public void RegisterServices(IServiceRegistry registry) { }
-            public void RegisterCommands(ICommandService commandService) { }
         }
 
     }

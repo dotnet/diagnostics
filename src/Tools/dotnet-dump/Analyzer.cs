@@ -60,9 +60,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
             ServiceManager.RegisterModule(new SOSHostingModule());
             ServiceManager.RegisterModule(new AnalysisModule());
 
-            // Register additional diagnostic modules from the catalog
-            ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
-
             // Adding service factories is not allowed after this point.
             ServiceContainer serviceContainer = CreateServiceContainer();
 

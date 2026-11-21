@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void BuiltInModulesRegisterBeforeInitializerModules()
+        public void BuiltInModulesRegisterBeforeAdditionalModules()
         {
             RecordingCommandService expected = new();
             new SOSHostingModule().RegisterCommands(expected);
@@ -47,8 +47,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             manager.RegisterModule(new AnalysisModule());
             manager.RegisterModule(new SOSHostingModule());
             manager.RegisterModule(new AnalysisModule());
-            manager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
-            manager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
+            manager.RegisterModule(new DiagnosticsModuleTests.TestModule());
+            manager.RegisterModule(new DiagnosticsModuleTests.TestModule());
             manager.FinalizeServices();
             manager.RegisterCommands(actual);
             manager.RegisterCommands(actual);
