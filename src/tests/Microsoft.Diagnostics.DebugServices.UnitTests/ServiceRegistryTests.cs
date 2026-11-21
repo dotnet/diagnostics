@@ -76,8 +76,9 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             RecordingRegistry registry = new();
             new CoreModule().RegisterServices(registry);
 
-            Assert.Equal(8, registry.Services.Count);
+            Assert.Equal(9, registry.Services.Count);
             Assert.Contains((ServiceScope.Target, typeof(IDataReader)), registry.Services.Keys);
+            Assert.Contains((ServiceScope.Target, typeof(Reader)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Target, typeof(IClrSymbolProvider)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Target, typeof(IRuntimeService)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Module, typeof(PEModule)), registry.Services.Keys);
@@ -126,7 +127,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 registry.Providers,
                 provider => Assert.Equal(typeof(IRuntimeProvider), provider.Type),
                 provider => Assert.Equal(typeof(IRuntimeDescriptionProvider), provider.Type),
-                provider => Assert.Equal(typeof(IRuntimeDescriptionProvider), provider.Type));
+                provider => Assert.Equal(typeof(IRuntimeDescriptionProvider), provider.Type),
+                provider => Assert.Equal(typeof(Action<LayoutManager>), provider.Type));
             Assert.Equal("registry", Assert.Throws<ArgumentNullException>(() => new SOSHostingModule().RegisterServices(null)).ParamName);
             Assert.Equal("registry", Assert.Throws<ArgumentNullException>(() => new AnalysisModule().RegisterServices(null)).ParamName);
         }
@@ -191,7 +193,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void AnalysisReaderRegistersAllTargetLayouts()
+        public void CoreReaderIncludesAnalysisLayouts()
         {
             Host host = new(HostType.DotnetDump);
             host.ServiceManager.RegisterModule(new AnalysisModule());
