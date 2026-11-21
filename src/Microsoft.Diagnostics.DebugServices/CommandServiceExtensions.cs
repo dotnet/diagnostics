@@ -20,8 +20,8 @@ namespace Microsoft.Diagnostics.DebugServices
             {
                 throw new ArgumentNullException(nameof(commandService));
             }
-            ObjectFactory factory = ActivatorUtilities.CreateFactory(typeof(TCommand), Type.EmptyTypes);
-            commandService.AddCommands<TCommand>(services => (TCommand)factory(services, Array.Empty<object>()));
+            Lazy<ObjectFactory> factory = new(() => ActivatorUtilities.CreateFactory(typeof(TCommand), Type.EmptyTypes));
+            commandService.AddCommands<TCommand>(services => (TCommand)factory.Value(services, Array.Empty<object>()));
         }
     }
 }

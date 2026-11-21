@@ -111,9 +111,9 @@ The threading model is single-threaded mainly because native debuggers like dbge
 
 The host is the debugger or program the command and the infrastructure runs on. The goal is to allow the same code for a command to run under different programs like the dotnet-dump REPL, lldb and Windows debuggers. Under Visual Studio the host will be a VS extension package.
 
-Each contributing assembly has one registration file containing an `IDiagnosticsModule` implementation. `CoreModule`, `SOSHostingModule`, and `AnalysisModule` contain the built-in service and command registrations and do not use module initializers. `Host` explicitly registers the core module; dotnet-dump and SOS.Extensions each directly register native SOS hosting before managed analysis, preserving command fallback order. Dotnet-dump registers its host-specific SOS dispatch and exit commands together after module commands so its host commands take precedence over contributed commands with the same names or aliases.
+Each contributing assembly has one registration file containing an `IDiagnosticsModule` implementation. `CoreModule`, `SOSHostingModule`, and `AnalysisModule` contain the built-in service and command registrations. `Host` explicitly registers the core module; dotnet-dump and SOS.Extensions each directly register native SOS hosting before managed analysis, preserving command fallback order. Dotnet-dump registers its host-specific SOS dispatch and exit commands together after module commands so its host commands take precedence over contributed commands with the same names or aliases.
 
-Additional assemblies advertise module factories to `DiagnosticsModuleCatalog` from `[ModuleInitializer]` methods before the host creates its global service container. Initializers advertise factories without constructing modules or services. Each service manager creates its own additional module instances and registers their services after the built-ins, before finalization; the host then calls `ServiceManager.RegisterCommands` to register commands from those same instances. Both built-in instances and additional factories use `ServiceManager.RegisterModule` to register services and retain the module for command registration. Registration does not scan assemblies, attributes, or types. Runtime extension DLL discovery and loading have been removed: `DOTNET_DIAGNOSTIC_EXTENSIONS` and the `extensions` subdirectory are no longer used.
+Applications that compile additional assemblies into their host explicitly construct and register their modules at the composition root before creating the global service container. Native debugger hosts pass additional modules through `HostServices.InitializeWithModules`; managed hosts call `ServiceManager.RegisterModule` directly. The host then calls `ServiceManager.RegisterCommands` to register commands from those same instances. Registration does not scan assemblies, attributes, or types. Runtime extension DLL discovery and loading have been removed: `DOTNET_DIAGNOSTIC_EXTENSIONS` and the `extensions` subdirectory are no longer used.
 
 #### IHost
 
@@ -157,16 +157,9 @@ An assembly registers its services and commands together in one module file. The
 
 ```csharp
 using Microsoft.Diagnostics.DebugServices;
-using System.Runtime.CompilerServices;
 
 public sealed class MyModule : IDiagnosticsModule
 {
-    [ModuleInitializer]
-    internal static void Initialize()
-    {
-        DiagnosticsModuleCatalog.Register(() => new MyModule());
-    }
-
     public void RegisterServices(IServiceRegistry registry)
     {
         registry.AddService<IMyService, MyService>(ServiceScope.Target);
@@ -182,23 +175,29 @@ public sealed class MyModule : IDiagnosticsModule
 }
 ```
 
-Hosts explicitly call `ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories())` after registering built-in modules and before creating the global service container. This consumes a snapshot of the catalog's factories, constructs each module once per service manager, and calls `RegisterServices`. `Host.CreateServiceContainer` only finalizes the service factories and creates the global container; it does not register catalog modules. Command registration remains a separate step:
+Managed hosts explicitly construct and register each additional module after the built-in modules and before creating the global service container. `Host.CreateServiceContainer` only finalizes the service factories and creates the global container. Command registration remains a separate step:
 
 ```csharp
-host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
+host.ServiceManager.RegisterModule(new MyModule());
 ServiceContainer services = host.CreateServiceContainer();
 host.ServiceManager.RegisterCommands(commandService);
 ```
 
-`ServiceManager.RegisterCommands` calls `RegisterCommands` once per command service, using the same module instances and order. Modules may register services at any scope or add ordered provider factories. Their constructors do not need to be public or parameterless because factories construct them directly. A services-only or commands-only module leaves its other registration method empty. Registration and construction failures propagate to the caller.
+`ServiceManager.RegisterCommands` calls `RegisterCommands` once per command service, using the same module instances and order. Modules may register services at any scope or add ordered provider factories. Their constructors do not need to be public or parameterless because the composition root constructs them directly. A services-only or commands-only module leaves its other registration method empty. Registration and construction failures propagate to the caller.
 
-Additional factories are sorted by assembly-qualified module name using ordinal comparison, independently of initializer execution order. Duplicate module types in the catalog are rejected. `ServiceManager.RegisterModule` registers each module type only once per manager, including when it is also advertised through the catalog. The catalog is shared within the application's load context, but module and service instances are not shared between hosts.
+`ServiceManager.RegisterModule` preserves explicit registration order and registers each module type only once per manager. Module and service instances are not shared between hosts.
 
 `IServiceManager.DiagnosticModules` exposes the successfully registered module instances in registration order. `sosstatus` displays their fully qualified type names and assembly versions, including both built-in and additional modules, without relying on assembly file locations.
 
-Direct module registration, catalog consumption, command registration, and service finalization are public startup operations on `ServiceManager`; hosts do not require friend access. Additional assemblies contribute through `DiagnosticsModuleCatalog.Register`.
+Direct module registration, command registration, and service finalization are public startup operations on `ServiceManager`; hosts do not require friend access.
 
-Each additional assembly must be initialized before the host consumes the catalog. Merely adding an unused project or package reference does not guarantee initialization on ordinary .NET. NativeAOT runs the included modules' initializers at startup, but the application must still include and retain each contributing assembly. A module initialized after a host's service finalization contributes only to later hosts, not existing containers. No DLLs are discovered or loaded from disk. Older target frameworks can compile-link the compatibility definition in `src/shared/Compatibility/ModuleInitializerAttribute.cs`. Application-internal initializers may intentionally suppress CA2255, which warns against initialization side effects in general-purpose libraries.
+NativeAOT applications must reference each contributing assembly and pass its module instance from their managed entry point so the compiler includes and retains it. Native debugger hosts call `HostServices.InitializeWithModules`; the reflection-bound `HostServices.Initialize(string)` entry point passes none and must remain the only method with that name:
+
+```csharp
+return HostServices.InitializeWithModules(extensionPath, new IDiagnosticsModule[] { new MyModule() });
+```
+
+A module registered after service finalization is rejected. No DLLs are discovered or loaded from disk.
 
 Constructor injection requires a public constructor. Required dependencies must be available from the container; optional dependencies can use constructor parameter defaults. The typed registration helpers preserve public constructor metadata for trimming and NativeAOT, where `ActivatorUtilities` uses its non-code-generating activation path. Services no longer use the repository's reflected constructor/member injection. Special cases, including factories that conditionally return `null` and native library initialization through `SOSLibrary.TryCreate`, use `AddServiceFactory<T>` with an explicit factory.
 
@@ -354,7 +353,7 @@ On Windows, it provides the debugger services (IDebuggerServices) to SOS.Extensi
 
 Writing a new SOS command is a lot easier now that they are written C# with easy access to various services and the CLRMD API. 
 
-The first step is to decide whether you want the new command to be part of the existing set of "built-in" commands (part of the Microsoft.Diagnostics.ExtensionCommands assembly) or in your own referenced project or NuGet package. Built-in commands must be added to `AnalysisModule.RegisterCommands`. A separate assembly advertises its `IDiagnosticsModule` factory from a module initializer and registers both services and commands in that module file; it must be initialized before host registration.
+The first step is to decide whether you want the new command to be part of the existing set of "built-in" commands (part of the Microsoft.Diagnostics.ExtensionCommands assembly) or in your own referenced project or NuGet package. Built-in commands must be added to `AnalysisModule.RegisterCommands`. A separate assembly defines an `IDiagnosticsModule` that registers both services and commands; each consuming application's entry point explicitly constructs and registers that module.
 
 Command and service assembly must be have a netstandard2.0 TargetFramework to run on .NET Framework hosts like VS.
 

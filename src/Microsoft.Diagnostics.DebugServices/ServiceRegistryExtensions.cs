@@ -40,8 +40,8 @@ namespace Microsoft.Diagnostics.DebugServices
         private static Func<IServiceProvider, TImplementation> CreateServiceFactory<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TImplementation>() where TImplementation : class
         {
-            ObjectFactory factory = ActivatorUtilities.CreateFactory(typeof(TImplementation), Type.EmptyTypes);
-            return services => (TImplementation)factory(services, Array.Empty<object>());
+            Lazy<ObjectFactory> factory = new(() => ActivatorUtilities.CreateFactory(typeof(TImplementation), Type.EmptyTypes));
+            return services => (TImplementation)factory.Value(services, Array.Empty<object>());
         }
     }
 }

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.ExtensionCommands;
@@ -54,11 +55,15 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 Assert.Equal(3, modules.Length);
                 Assert.Equal(host.ServiceManager.DiagnosticModules.Select(module => {
                     Type type = module.GetType();
-                    return $"-> {type.FullName} ({type.Assembly.GetName().Version})";
+                    Assembly assembly = type.Assembly;
+                    string informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                        ?? assembly.GetName().Version?.ToString();
+                    return $"-> {type.FullName} ({assembly.GetName().Name} {informationalVersion})";
                 }), modules);
                 Assert.Contains(modules, line => line.Contains(typeof(CoreModule).FullName));
                 Assert.Contains(modules, line => line.Contains(typeof(SOSHostingModule).FullName));
                 Assert.Contains(modules, line => line.Contains(typeof(AnalysisModule).FullName));
+                Assert.Contains($"SOS native directory: {services.GetRequiredService<IHostAssetResolver>().NativeBinariesDirectory}", console.OutputLines);
             }
             target.Destroy();
             services.DisposeServices();
@@ -477,6 +482,16 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
+        public void TypedRegistrationCreatesActivatorFactoryLazily()
+        {
+            RecordingRegistry registry = new();
+
+            registry.AddService<AmbiguousConstructorService>(ServiceScope.Global);
+
+            Assert.Contains((ServiceScope.Global, typeof(AmbiguousConstructorService)), registry.Services.Keys);
+        }
+
+        [Fact]
         public void TypedRegistrationRejectsNullRegistry()
         {
             IServiceRegistry registry = null;
@@ -562,6 +577,17 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
 
             public void Dispose() => Disposals++;
+        }
+
+        private sealed class AmbiguousConstructorService
+        {
+            public AmbiguousConstructorService(Dependency dependency)
+            {
+            }
+
+            public AmbiguousConstructorService(IServiceProvider services)
+            {
+            }
         }
 
         private sealed class DisposableService : IDisposable

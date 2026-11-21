@@ -13,7 +13,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         private readonly Dictionary<Type, ServiceFactory>[] _factories;
         private readonly Dictionary<Type, object> _providerFactories;
-        private readonly HashSet<Func<IDiagnosticsModule>> _registeredModuleFactories = new();
         private readonly List<IDiagnosticsModule> _modules = new();
         private readonly HashSet<ICommandService> _registeredCommandServices = new();
         private bool _finalized;
@@ -53,35 +52,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             module.RegisterServices(this);
             _modules.Add(module);
-        }
-
-        /// <summary>
-        /// Creates a module per factory and registers its services once per service manager.
-        /// </summary>
-        public void RegisterModules(IEnumerable<Func<IDiagnosticsModule>> factories)
-        {
-            if (factories is null)
-            {
-                throw new ArgumentNullException(nameof(factories));
-            }
-            if (_finalized)
-            {
-                throw new InvalidOperationException();
-            }
-            foreach (Func<IDiagnosticsModule> factory in factories)
-            {
-                if (factory is null)
-                {
-                    throw new ArgumentException("Diagnostics module factories must not contain null.", nameof(factories));
-                }
-                if (_registeredModuleFactories.Contains(factory))
-                {
-                    continue;
-                }
-                IDiagnosticsModule module = factory() ?? throw new InvalidOperationException("A diagnostics module factory returned null.");
-                RegisterModule(module);
-                _registeredModuleFactories.Add(factory);
-            }
         }
 
         /// <summary>
