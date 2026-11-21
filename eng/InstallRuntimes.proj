@@ -65,7 +65,10 @@
           AfterTargets="Build"
           DependsOnTargets="CleanupVersionManifest;InstallTestSdk;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
 
-  <Target Name="InstallTestSdk">
+  <!-- .NET 12 no longer publishes SDKs that run natively on Windows x86 or Linux ARM32.
+       These cross-architecture legs use the host SDK installed by InstallBuildSdk. -->
+  <Target Name="InstallTestSdk"
+          Condition="'$(TargetArch)' != 'x86' and '$(TargetArch)' != 'arm'">
     <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="InstallSdk"
              Properties="InstallRoot=$(DotNetInstallRoot);SdkBuildIdentifier=$(MicrosoftNETSdkVersion);SdkArchitecture=$(TargetArch)" />
   </Target>
