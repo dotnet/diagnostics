@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Diagnostics.CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
@@ -64,6 +65,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             using (Process process = Process.Start(startInfo))
             {
+                Task<string> stderr = process.StandardError.ReadToEndAsync();
+                Task<string> stdout = process.StandardOutput.ReadToEndAsync();
                 const int processTimeout = 15000;
                 bool processExitedCleanly = process.WaitForExit(processTimeout);
                 if (!processExitedCleanly)
@@ -73,10 +76,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
 
                 OutputHelper.WriteLine("StdErr");
-                stdErr = process.StandardError.ReadToEnd();
+                stdErr = stderr.GetAwaiter().GetResult();
                 OutputHelper.WriteLine(stdErr);
                 OutputHelper.WriteLine("StdOut");
-                stdOut = process.StandardOutput.ReadToEnd();
+                stdOut = stdout.GetAwaiter().GetResult();
                 OutputHelper.WriteLine(stdOut);
 
                 Assert.True(processExitedCleanly, "Launched process failed to exit");
