@@ -42,6 +42,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 return false;
             }
+
             try
             {
                 info = reader.Read<SpecialDiagInfoHeader>(address);
