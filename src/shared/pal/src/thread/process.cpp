@@ -2970,6 +2970,68 @@ CreateProcessModules(
 
     *lpCount = count;
 
+#elif defined(__FreeBSD__)
+
+    int mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_VMMAP, static_cast<int>(dwProcessId) };
+    size_t length = 0;
+    if (sysctl(mib, 4, nullptr, &length, nullptr, 0) != 0)
+        return nullptr;
+
+    length = length * 4 / 3;
+    char *buffer = static_cast<char *>(malloc(length));
+    if (buffer == nullptr)
+        return nullptr;
+
+    if (sysctl(mib, 4, buffer, &length, nullptr, 0) != 0)
+    {
+        free(buffer);
+        return nullptr;
+    }
+
+    DWORD count = 0;
+    for (char *position = buffer, *end = buffer + length; position < end;)
+    {
+        kinfo_vmentry *mapping = reinterpret_cast<kinfo_vmentry *>(position);
+        if (mapping->kve_structsize == 0)
+            break;
+        position += mapping->kve_structsize;
+
+        if (mapping->kve_type != KVME_TYPE_VNODE || mapping->kve_path[0] == '\0')
+            continue;
+
+        ProcessModules *entry = listHead;
+        while (entry != nullptr && strcmp(mapping->kve_path, entry->GetName()) != 0)
+            entry = entry->GetNext();
+
+        void *startAddress = reinterpret_cast<void *>(mapping->kve_start);
+        if (entry != nullptr)
+        {
+            entry->_minimumAddress = std::min(startAddress, entry->_minimumAddress);
+            if (entry->_baseAddress == nullptr && mapping->kve_offset == 0)
+                entry->_baseAddress = startAddress;
+            continue;
+        }
+
+        size_t nameLength = strlen(mapping->kve_path) + 1;
+        entry = static_cast<ProcessModules *>(malloc(sizeof(ProcessModules) + nameLength));
+        if (entry == nullptr)
+        {
+            DestroyProcessModules(listHead);
+            listHead = nullptr;
+            count = 0;
+            break;
+        }
+        strcpy_s(entry->_name, nameLength, mapping->kve_path);
+        entry->_baseAddress = mapping->kve_offset == 0 ? startAddress : nullptr;
+        entry->_minimumAddress = startAddress;
+        entry->_next = listHead;
+        listHead = entry;
+        count++;
+    }
+
+    free(buffer);
+    *lpCount = count;
+
 #elif HAVE_PROCFS_MAPS
 
     // Here we read /proc/<pid>/maps file in order to parse it and figure out what it says
