@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.IO;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.FileFormats;
 
@@ -21,7 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             registry.AddServiceFactory<ClrMDHelper>(ServiceScope.Runtime, ClrMDHelper.TryCreate);
-            registry.AddServiceFactory<Reader>(ServiceScope.Target, CreateReader);
+            registry.AddProviderFactory<Action<LayoutManager>>(_ => RegisterLayouts);
             registry.AddService<DumpHeapService>(ServiceScope.Runtime);
             registry.AddService<GCHistory>(ServiceScope.Runtime);
             registry.AddService<ManagedFileLineService>(ServiceScope.Runtime);
@@ -31,20 +30,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             registry.AddService<RootCacheService>(ServiceScope.Runtime);
         }
 
-        private static Reader CreateReader(IServiceProvider services)
-        {
-            IMemoryService memoryService = services.GetRequiredService<IMemoryService>();
-            Stream stream = memoryService.CreateMemoryStream();
-            LayoutManager layoutManager = new LayoutManager()
-                .AddPrimitives()
-                .AddEnumTypes()
-                .AddSizeT(memoryService.PointerSize)
-                .AddNullTerminatedString()
+        private static void RegisterLayouts(LayoutManager layoutManager) =>
+            layoutManager
                 .RegisterArray<byte>()
                 .RegisterTStruct<SpecialDiagInfoHeader>()
                 .RegisterTStruct<ClrEngineMetrics>();
-            return new Reader(new StreamAddressSpace(stream), layoutManager);
-        }
 
         public void RegisterCommands(ICommandService commandService)
         {
