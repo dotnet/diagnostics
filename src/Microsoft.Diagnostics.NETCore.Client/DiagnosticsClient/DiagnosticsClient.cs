@@ -412,7 +412,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             HashSet<int> discoveredPids = new();
 
-            foreach (int pid in GetLocalPublishedProcesses(PidIpcEndpoint.IpcRootPath))
+            foreach (int pid in GetLocalPublishedProcesses())
             {
                 discoveredPids.Add(pid);
             }
@@ -428,23 +428,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Discovers .NET processes with diagnostic sockets in the local IPC root path.
         /// </summary>
-        internal static IEnumerable<int> GetLocalPublishedProcesses(string ipcRootPath)
+        private static IEnumerable<int> GetLocalPublishedProcesses()
         {
-            HashSet<int> pids = new();
-            Dictionary<int, uint?> processUids = new();
-            bool checkOwner = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
-                RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+            List<int> pids = new();
 
             string[] files;
             try
             {
-                files = Directory.GetFiles(ipcRootPath);
+                files = Directory.GetFiles(PidIpcEndpoint.IpcRootPath);
             }
             catch (UnauthorizedAccessException ex)
             {
-                if (ipcRootPath.StartsWith(@"\\.\pipe", StringComparison.Ordinal))
+                if (PidIpcEndpoint.IpcRootPath.StartsWith(@"\\.\pipe", StringComparison.Ordinal))
                 {
-                    throw new DiagnosticsClientException($"Enumerating {ipcRootPath} is not authorized", ex);
+                    throw new DiagnosticsClientException($"Enumerating {PidIpcEndpoint.IpcRootPath} is not authorized", ex);
                 }
 
                 throw;
@@ -465,38 +462,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     continue;
                 }
 
-                if (pids.Contains(processId) || !PidIpcEndpoint.CheckProcessExists(processId))
+                if (!PidIpcEndpoint.CheckProcessExists(processId))
                 {
                     continue;
-                }
-
-                if (checkOwner)
-                {
-                    try
-                    {
-                        if (!processUids.TryGetValue(processId, out uint? uid))
-                        {
-                            // Cache failed credential lookups as well as successful ones for this scan.
-                            processUids.Add(processId, null);
-                            uid = UnixSocketOwner.GetProcessUid(processId);
-                            processUids[processId] = uid;
-                        }
-
-                        if (!uid.HasValue || !UnixSocketOwner.IsSocketOwnedBy(port, uid.Value))
-                        {
-                            continue;
-                        }
-                    }
-                    catch (IOException ex)
-                    {
-                        Trace.TraceWarning($"Unable to inspect diagnostic socket for process {processId}: {ex.Message}");
-                        continue;
-                    }
-                    catch (UnauthorizedAccessException ex)
-                    {
-                        Trace.TraceWarning($"Unable to inspect diagnostic socket for process {processId}: {ex.Message}");
-                        continue;
-                    }
                 }
 
                 pids.Add(processId);
@@ -547,7 +515,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     // Cross-namespace: search via /proc/{pid}/root/
                     string crossNsDir = Path.Combine(PidIpcEndpoint.GetProcessRootPath(hostPid), targetTmpDir.TrimStart(Path.DirectorySeparatorChar));
-                    if (PidIpcEndpoint.TryResolveAddress(crossNsDir, nsPid, out _, hostPid))
+                    if (PidIpcEndpoint.TryResolveAddress(crossNsDir, nsPid, out _))
                     {
                         discoveredPids.Add(hostPid);
                     }

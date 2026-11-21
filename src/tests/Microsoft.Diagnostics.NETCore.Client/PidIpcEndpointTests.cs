@@ -2,74 +2,72 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Diagnostics.CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
+using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class PidIpcEndpointTests
     {
+        private readonly ITestOutputHelper _output;
+
         public static bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
         public static bool IsNotLinux => !IsLinux;
         public static bool IsUnix => IsLinux || RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-
-        [Theory]
-        [InlineData("Uid:\t1000\t1001\t1002\t1003", 1003u)]
-        [InlineData("Uid:  0  0  0  0", 0u)]
-        [InlineData("Uid:\t1\t2\t3\t4294967295", uint.MaxValue)]
-        public void ParseLinuxUid_UsesFilesystemUid(string line, uint expected)
+        public static IEnumerable<object[]> SpoofConfigurations
         {
-            Assert.Equal(expected, UnixSocketOwner.ParseLinuxUid(line));
+            get
+            {
+                object[] config = TestRunner.Configurations.FirstOrDefault(
+                    candidate => ((TestConfiguration)candidate[0]).RuntimeFrameworkVersionMajor == 10)
+                    ?? TestRunner.Configurations.First();
+
+                return new[]
+                {
+                    new object[] { config[0], false, false },
+                    new object[] { config[0], false, true },
+                    new object[] { config[0], true, false },
+                    new object[] { config[0], true, true }
+                };
+            }
+        }
+
+        public PidIpcEndpointTests(ITestOutputHelper output)
+        {
+            _output = output;
         }
 
         [Theory]
-        [InlineData("Uid:\t1\t2\t3")]
-        [InlineData("Uid:\t1\t2\t3\t-1")]
-        [InlineData("Uid:\t1\t2\t3\t4294967296")]
-        [InlineData("Uid:\t1\t2\t3\tinvalid")]
-        [InlineData("Gid:\t1\t2\t3\t4")]
-        public void ParseLinuxUid_InvalidStatus_Throws(string line)
+        [InlineData(Architecture.X64, 17)]
+        [InlineData(Architecture.X86, 17)]
+        [InlineData(Architecture.Arm, 17)]
+        [InlineData(Architecture.Arm64, 17)]
+        [InlineData((Architecture)5, 17)] // S390x
+        [InlineData((Architecture)6, 17)] // LoongArch64
+        [InlineData((Architecture)7, 17)] // Armv6
+        [InlineData((Architecture)8, 21)] // Ppc64le
+        [InlineData((Architecture)9, 17)] // RiscV64
+        public void GetLinuxPeerCredentialsOption_ReturnsArchitectureValue(Architecture architecture, int expected)
         {
-            Assert.Throws<IOException>(() => UnixSocketOwner.ParseLinuxUid(line));
+            Assert.Equal(expected, UnixSocketPeer.GetLinuxPeerCredentialsOption(architecture));
         }
 
-        [ConditionalTheory(nameof(IsUnix))]
-        [InlineData("socket")]
-        [InlineData("socket-\u00e9")]
-        public void IsSocketOwnedBy_RejectsWrongUidRegularFileSymlinkAndMissingFile(string socketName)
+        [Fact]
+        public void GetLinuxPeerCredentialsOption_UnsupportedArchitecture_Throws()
         {
-            string directory = CreateSocketTestDirectory();
-            try
-            {
-                uint uid = UnixSocketOwner.GetProcessUid(Environment.ProcessId);
-                string path = Path.Combine(directory, socketName);
-                using Socket socket = BindSocket(path);
-                Assert.True(UnixSocketOwner.IsSocketOwnedBy(path, uid));
-                Assert.False(UnixSocketOwner.IsSocketOwnedBy(path, uid == 0 ? 1u : 0u));
-
-                string regularFile = Path.Combine(directory, "regular");
-                File.WriteAllText(regularFile, "");
-                Assert.False(UnixSocketOwner.IsSocketOwnedBy(regularFile, uid));
-
-                string link = Path.Combine(directory, "link");
-                File.CreateSymbolicLink(link, path);
-                Assert.False(UnixSocketOwner.IsSocketOwnedBy(link, uid));
-                Assert.False(UnixSocketOwner.IsSocketOwnedBy(directory, uid));
-                File.Delete(link);
-                File.CreateSymbolicLink(link, Path.Combine(directory, "missing"));
-                Assert.False(UnixSocketOwner.IsSocketOwnedBy(link, uid));
-                Assert.False(UnixSocketOwner.IsSocketOwnedBy(Path.Combine(directory, "missing"), uid));
-            }
-            finally
-            {
-                Directory.Delete(directory, recursive: true);
-            }
+            Assert.Throws<PlatformNotSupportedException>(
+                () => UnixSocketPeer.GetLinuxPeerCredentialsOption((Architecture)int.MaxValue));
         }
 
         [ConditionalFact(nameof(IsUnix))]
@@ -87,75 +85,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using Socket server = listener.Accept();
 
                 int pid = Environment.ProcessId;
-                uint uid = UnixSocketOwner.GetProcessUid(pid);
-                Assert.True(UnixSocketOwner.IsConnectedToProcess(client, pid, uid));
-                Assert.True(UnixSocketOwner.IsConnectedToProcess(server, pid, uid));
-                Assert.False(UnixSocketOwner.IsConnectedToProcess(client, pid + 1, uid));
-                Assert.False(UnixSocketOwner.IsConnectedToProcess(client, pid, uid == 0 ? 1u : 0u));
-            }
-            finally
-            {
-                Directory.Delete(directory, recursive: true);
-            }
-        }
-
-        [ConditionalFact(nameof(IsUnix))]
-        public void TryResolveAddress_FiltersBeforeSortingAndUsesHostPid()
-        {
-            string directory = CreateSocketTestDirectory();
-            try
-            {
-                const int filenamePid = 123;
-                string older = Path.Combine(directory, $"dotnet-diagnostic-{filenamePid}-1-socket");
-                string newer = Path.Combine(directory, $"dotnet-diagnostic-{filenamePid}-2-socket");
-                string regular = Path.Combine(directory, $"dotnet-diagnostic-{filenamePid}-3-socket");
-                string link = Path.Combine(directory, $"dotnet-diagnostic-{filenamePid}-4-socket");
-                using Socket olderSocket = BindSocket(older);
-                using Socket newerSocket = BindSocket(newer);
-                File.WriteAllText(regular, "");
-                File.SetLastWriteTimeUtc(older, DateTime.UtcNow.AddMinutes(-3));
-                File.SetLastWriteTimeUtc(newer, DateTime.UtcNow.AddMinutes(-2));
-                File.CreateSymbolicLink(link, regular);
-
-                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, filenamePid, out string address, Environment.ProcessId));
-                Assert.Equal(newer, address);
-            }
-            finally
-            {
-                Directory.Delete(directory, recursive: true);
-            }
-        }
-
-        [ConditionalFact(nameof(IsUnix))]
-        public void TryResolveAddress_WrongOwnerSocketIsNotSelected()
-        {
-            if (UnixSocketOwner.GetProcessUid(Environment.ProcessId) != 0)
-            {
-                Assert.Skip("Changing socket ownership requires root.");
-            }
-
-            string directory = CreateSocketTestDirectory();
-            try
-            {
-                string valid = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-1-socket");
-                string wrongOwner = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-2-socket");
-                using Socket validSocket = BindSocket(valid);
-                using Socket wrongOwnerSocket = BindSocket(wrongOwner);
-                File.SetLastWriteTimeUtc(valid, DateTime.UtcNow.AddMinutes(-2));
-                Assert.Equal(0, Chown(wrongOwner, 1, uint.MaxValue));
-                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out string address));
-                Assert.Equal(valid, address);
-
-                string routerPath = Path.Combine(directory, $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-1-socket");
-                using Socket router = BindSocket(routerPath);
-                Assert.Equal(0, Chown(routerPath, 1, uint.MaxValue));
-                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out address));
-                Assert.Equal(valid, address);
-
-                validSocket.Dispose();
-                File.Delete(valid);
-                Assert.False(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out address));
-                Assert.Null(address);
+                Assert.True(UnixSocketPeer.IsConnectedToProcess(client, pid));
+                Assert.True(UnixSocketPeer.IsConnectedToProcess(server, pid));
+                Assert.False(UnixSocketPeer.IsConnectedToProcess(client, pid + 1));
             }
             finally
             {
@@ -169,8 +101,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             string directory = CreateSocketTestDirectory();
             try
             {
-                string invalid = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-1-socket");
-                File.WriteAllText(invalid, "");
                 using Socket router = BindSocket(Path.Combine(directory, $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-1-socket"));
                 Assert.False(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out string address));
                 Assert.Null(address);
@@ -189,17 +119,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 string runtimePath = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-1-socket");
                 string routerPath = Path.Combine(directory, $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-1-socket");
-                using Socket runtime = BindSocket(runtimePath);
-                using Socket router = BindSocket(routerPath);
-                DateTime timestamp = DateTime.UtcNow.AddMinutes(-2);
-                File.SetLastWriteTimeUtc(runtimePath, timestamp);
-                File.SetLastWriteTimeUtc(routerPath, timestamp.AddMinutes(-1));
+                File.WriteAllText(runtimePath, "");
+                Thread.Sleep(1100);
+                File.WriteAllText(routerPath, "");
                 Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out string address));
-                Assert.Equal(runtimePath, address);
-
-                File.SetLastWriteTimeUtc(routerPath, timestamp);
-                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out address));
                 Assert.Equal(routerPath, address);
+
+                File.Delete(runtimePath);
+                Thread.Sleep(1100);
+                File.WriteAllText(runtimePath, "");
+                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out address));
+                Assert.Equal(runtimePath, address);
             }
             finally
             {
@@ -208,90 +138,122 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [ConditionalFact(nameof(IsUnix))]
-        public void TryResolveAddress_UnreadableTargetCredentials_FailsClosed()
+        public void TryResolveAddress_IgnoresInvalidCandidateName()
         {
             string directory = CreateSocketTestDirectory();
             try
             {
-                using Socket socket = BindSocket(Path.Combine(directory, "dotnet-diagnostic-123-1-socket"));
-                Assert.False(PidIpcEndpoint.TryResolveAddress(directory, 123, out string address, int.MaxValue));
-                Assert.Null(address);
+                string validPath = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-1-socket");
+                string invalidPath = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-2,x-socket");
+                File.WriteAllText(validPath, "");
+                Thread.Sleep(1100);
+                File.WriteAllText(invalidPath, "");
+
+                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out string address));
+                Assert.Equal(validPath, address);
             }
             finally
             {
                 Directory.Delete(directory, recursive: true);
-            }
-        }
-
-        [ConditionalFact(nameof(IsUnix))]
-        public void IsSocketOwnedBy_StatFailure_ThrowsWithPath()
-        {
-            string directory = CreateSocketTestDirectory();
-            try
-            {
-                string file = Path.Combine(directory, "regular");
-                File.WriteAllText(file, "");
-                string invalid = Path.Combine(file, "socket");
-                IOException error = Assert.Throws<IOException>(() => UnixSocketOwner.IsSocketOwnedBy(invalid, 0));
-                Assert.Contains(invalid, error.Message);
-                Assert.IsType<System.ComponentModel.Win32Exception>(error.InnerException);
-            }
-            finally
-            {
-                Directory.Delete(directory, recursive: true);
-            }
-        }
-
-        [ConditionalFact(nameof(IsUnix))]
-        public void GetPublishedProcesses_RegularFileDoesNotPublishProcess()
-        {
-            using Process child = Process.Start(new ProcessStartInfo("sleep", "30") { UseShellExecute = false });
-            string path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{child.Id}-123456789-socket");
-            try
-            {
-                File.WriteAllText(path, "");
-                Assert.DoesNotContain(child.Id, DiagnosticsClient.GetPublishedProcesses());
-            }
-            finally
-            {
-                File.Delete(path);
-                child.Kill();
-                child.WaitForExit();
             }
         }
 
         [ConditionalTheory(nameof(IsUnix))]
-        [InlineData(1)]
-        [InlineData(1000)]
-        public void GetLocalPublishedProcesses_ValidatesCandidatesAndDeduplicatesProcesses(int regularFileCount)
+        [MemberData(nameof(SpoofConfigurations))]
+        public async Task Connect_RejectsSpoofedCandidateAndFallsBack(TestConfiguration config, bool useRouterName, bool useAsync)
         {
-            string directory = CreateSocketTestDirectory();
+            await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
+            await runner.Start(testProcessTimeout: 60_000);
+
+            string otherProcessAddress = PidIpcEndpoint.GetDefaultAddress(runner.Pid);
+            string prefix = useRouterName ? "dotnet-diagnostic-dsrouter" : "dotnet-diagnostic";
+            string spoofPath = Path.Combine(
+                PidIpcEndpoint.IpcRootPath,
+                $"{prefix}-{Environment.ProcessId}-99999999-socket");
+            File.CreateSymbolicLink(spoofPath, otherProcessAddress);
             try
             {
-                for (int i = 0; i < regularFileCount; i++)
-                {
-                    File.WriteAllText(Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-{i}-socket"), "");
-                }
+                Assert.True(PidIpcEndpoint.TryResolveAddress(
+                    PidIpcEndpoint.IpcRootPath,
+                    Environment.ProcessId,
+                    out string resolvedAddress));
+                Assert.Equal(spoofPath, resolvedAddress);
 
-                string validPath = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-{regularFileCount}-socket");
-                string link = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-{regularFileCount + 1}-socket");
-                File.CreateSymbolicLink(link, validPath);
-                Assert.Empty(DiagnosticsClient.GetLocalPublishedProcesses(directory));
-
-                using Socket socket = BindSocket(validPath);
-                using Socket secondSocket = BindSocket(Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-{regularFileCount + 2}-socket"));
-                Assert.Equal(new[] { Environment.ProcessId }, DiagnosticsClient.GetLocalPublishedProcesses(directory));
-
-                socket.Dispose();
-                secondSocket.Dispose();
-                File.Delete(validPath);
-                File.Delete(Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-{regularFileCount + 2}-socket"));
-                Assert.Empty(DiagnosticsClient.GetLocalPublishedProcesses(directory));
+                DiagnosticsClient client = new(Environment.ProcessId);
+                DiagnosticsClientApiShim clientShim = new(client, useAsync);
+                ProcessInfo info = await clientShim.GetProcessInfo();
+                Assert.Equal((ulong)Environment.ProcessId, info.ProcessId);
             }
             finally
             {
-                Directory.Delete(directory, recursive: true);
+                File.Delete(spoofPath);
             }
+        }
+
+        [ConditionalTheory(nameof(IsUnix))]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Connect_SkipsUnconnectableCandidate(bool useRouterName)
+        {
+            string prefix = useRouterName ? "dotnet-diagnostic-dsrouter" : "dotnet-diagnostic";
+            string invalidPath = Path.Combine(
+                PidIpcEndpoint.IpcRootPath,
+                $"{prefix}-{Environment.ProcessId}-99999998-socket");
+            File.WriteAllText(invalidPath, "");
+
+            try
+            {
+                Assert.True(PidIpcEndpoint.TryResolveAddress(
+                    PidIpcEndpoint.IpcRootPath,
+                    Environment.ProcessId,
+                    out string resolvedAddress));
+                Assert.Equal(invalidPath, resolvedAddress);
+
+                DiagnosticsClient client = new(Environment.ProcessId);
+                ProcessInfo info = client.GetProcessInfo();
+                Assert.Equal((ulong)Environment.ProcessId, info.ProcessId);
+            }
+            finally
+            {
+                File.Delete(invalidPath);
+            }
+        }
+
+        [ConditionalFact(nameof(IsUnix))]
+        public void Connect_SkipsOverlongCandidate()
+        {
+            string overlongPath = Path.Combine(
+                PidIpcEndpoint.IpcRootPath,
+                $"dotnet-diagnostic-{Environment.ProcessId}-{new string('9', 120)}-socket");
+            File.WriteAllText(overlongPath, "");
+
+            try
+            {
+                Assert.True(PidIpcEndpoint.TryResolveAddress(
+                    PidIpcEndpoint.IpcRootPath,
+                    Environment.ProcessId,
+                    out string resolvedAddress));
+                Assert.Equal(overlongPath, resolvedAddress);
+
+                DiagnosticsClient client = new(Environment.ProcessId);
+                ProcessInfo info = client.GetProcessInfo();
+                Assert.Equal((ulong)Environment.ProcessId, info.ProcessId);
+            }
+            finally
+            {
+                File.Delete(overlongPath);
+            }
+        }
+
+        [ConditionalFact(nameof(IsUnix))]
+        public async Task ConnectAsync_AlreadyCanceled_ThrowsOperationCanceled()
+        {
+            using CancellationTokenSource cancellation = new();
+            cancellation.Cancel();
+
+            PidIpcEndpoint endpoint = new(Environment.ProcessId);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => endpoint.ConnectAsync(cancellation.Token));
         }
 
         [Fact]
@@ -336,11 +298,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw;
             }
         }
-
-#pragma warning disable SYSLIB1054
-        [DllImport("libc", EntryPoint = "chown", SetLastError = true)]
-        private static extern int Chown(string path, uint uid, uint gid);
-#pragma warning restore SYSLIB1054
 
         #region Parsing tests (platform-independent, synthetic data)
 

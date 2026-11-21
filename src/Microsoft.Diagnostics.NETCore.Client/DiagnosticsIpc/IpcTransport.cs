@@ -9,6 +9,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
@@ -251,6 +252,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private const string _procStatusPathFormat = "/proc/{0}/status";
         private const string _procEnvironPathFormat = "/proc/{0}/environ";
         private const string _procRootPathFormat = "/proc/{0}/root";
+        private static bool IsUnixPeerValidationSupported =>
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+            RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
         /// <summary>
         /// Returns the path to a process's root filesystem via /proc/{pid}/root.
@@ -274,8 +278,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override Stream Connect(TimeSpan timeout)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) &&
-                !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            if (!IsUnixPeerValidationSupported)
             {
                 string address = GetDefaultAddress(_pid);
                 _config = IpcEndpointConfig.Parse(address + ",connect");
@@ -283,28 +286,32 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             string[] addresses = GetDefaultAddresses(_pid);
-            uint expectedUid = GetExpectedUid();
             Stopwatch stopwatch = Stopwatch.StartNew();
             Exception lastError = null;
+            bool isFirstCandidate = true;
 
             foreach (string address in addresses)
             {
                 TimeSpan remainingTimeout = timeout;
-                if (timeout != Timeout.InfiniteTimeSpan)
+                if (!isFirstCandidate && timeout != Timeout.InfiniteTimeSpan)
                 {
                     remainingTimeout -= stopwatch.Elapsed;
-                    if (remainingTimeout < TimeSpan.Zero)
+                    if (remainingTimeout <= TimeSpan.Zero)
                     {
                         break;
                     }
                 }
+                isFirstCandidate = false;
 
                 Stream stream = null;
                 try
                 {
-                    _config = IpcEndpointConfig.Parse(address + ",connect");
+                    _config = new IpcEndpointConfig(
+                        address,
+                        IpcEndpointConfig.TransportType.UnixDomainSocket,
+                        IpcEndpointConfig.PortType.Connect);
                     stream = IpcEndpointHelper.Connect(_config, remainingTimeout);
-                    if (ValidateConnectedPeer(stream, expectedUid))
+                    if (ValidateConnectedPeer(stream))
                     {
                         Stream connectedStream = stream;
                         stream = null;
@@ -312,17 +319,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
 
                     lastError = new ServerNotAvailableException(
-                        $"Diagnostic endpoint '{address}' is not owned by process {_pid}.");
+                        $"Diagnostic endpoint '{address}' does not belong to process {_pid}.");
                 }
-                catch (ServerNotAvailableException ex)
-                {
-                    lastError = ex;
-                }
-                catch (IOException ex)
-                {
-                    lastError = ex;
-                }
-                catch (TimeoutException ex)
+                catch (Exception ex) when (IsCandidateConnectionException(ex))
                 {
                     lastError = ex;
                 }
@@ -330,6 +329,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     stream?.Dispose();
                 }
+            }
+
+            if (lastError is TimeoutException timeoutException)
+            {
+                throw timeoutException;
             }
 
             throw new ServerNotAvailableException($"Unable to connect to Process {_pid}.", lastError);
@@ -337,8 +341,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override async Task<Stream> ConnectAsync(CancellationToken token)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) &&
-                !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            if (!IsUnixPeerValidationSupported)
             {
                 string address = GetDefaultAddress(_pid);
                 _config = IpcEndpointConfig.Parse(address + ",connect");
@@ -346,17 +349,21 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             string[] addresses = GetDefaultAddresses(_pid);
-            uint expectedUid = GetExpectedUid();
             Exception lastError = null;
 
             foreach (string address in addresses)
             {
+                token.ThrowIfCancellationRequested();
+
                 Stream stream = null;
                 try
                 {
-                    _config = IpcEndpointConfig.Parse(address + ",connect");
+                    _config = new IpcEndpointConfig(
+                        address,
+                        IpcEndpointConfig.TransportType.UnixDomainSocket,
+                        IpcEndpointConfig.PortType.Connect);
                     stream = await IpcEndpointHelper.ConnectAsync(_config, token).ConfigureAwait(false);
-                    if (ValidateConnectedPeer(stream, expectedUid))
+                    if (ValidateConnectedPeer(stream))
                     {
                         Stream connectedStream = stream;
                         stream = null;
@@ -364,14 +371,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
 
                     lastError = new ServerNotAvailableException(
-                        $"Diagnostic endpoint '{address}' is not owned by process {_pid}.");
+                        $"Diagnostic endpoint '{address}' does not belong to process {_pid}.");
                 }
-                catch (ServerNotAvailableException ex)
+                catch (Exception ex) when (IsCandidateConnectionException(ex))
                 {
-                    lastError = ex;
-                }
-                catch (IOException ex)
-                {
+                    token.ThrowIfCancellationRequested();
                     lastError = ex;
                 }
                 finally
@@ -380,6 +384,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
 
+            token.ThrowIfCancellationRequested();
             throw new ServerNotAvailableException($"Unable to connect to Process {_pid}.", lastError);
         }
 
@@ -393,29 +398,33 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using Stream _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
-        private uint GetExpectedUid()
-        {
-            return UnixSocketOwner.GetProcessUid(_pid);
-        }
-
-        private bool ValidateConnectedPeer(Stream stream, uint expectedUid)
+        private bool ValidateConnectedPeer(Stream stream)
         {
             return stream is ExposedSocketNetworkStream socketStream &&
-                UnixSocketOwner.IsConnectedToProcess(socketStream.Socket, _pid, expectedUid);
+                UnixSocketPeer.IsConnectedToProcess(socketStream.Socket, _pid);
+        }
+
+        private static bool IsCandidateConnectionException(Exception ex)
+        {
+            return ex is ServerNotAvailableException ||
+                ex is IOException ||
+                ex is TimeoutException ||
+                ex is ArgumentOutOfRangeException ||
+                ex is TargetInvocationException { InnerException: ArgumentOutOfRangeException };
         }
 
         /// <summary>
         /// Searches files in a directory for a diagnostic endpoint matching the given PID.
         /// On Windows, resolves named pipes. On other platforms, searches for Unix domain sockets.
         /// </summary>
-        internal static bool TryResolveAddress(string searchDirectory, int pid, out string address, int? hostPid = null)
+        internal static bool TryResolveAddress(string searchDirectory, int pid, out string address)
         {
-            string[] addresses = ResolveAddresses(searchDirectory, pid, hostPid);
+            string[] addresses = ResolveAddresses(searchDirectory, pid);
             address = addresses.FirstOrDefault();
             return !string.IsNullOrEmpty(address);
         }
 
-        private static string[] ResolveAddresses(string searchDirectory, int pid, int? hostPid)
+        private static string[] ResolveAddresses(string searchDirectory, int pid)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -436,12 +445,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                bool checkOwner = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
-                    RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-                uint uid = checkOwner ? UnixSocketOwner.GetProcessUid(hostPid ?? pid) : 0;
                 string[] runtimeAddresses = Directory.GetFiles(searchDirectory, string.Format(_defaultAddressFormatNonWindows, pid, "*"))
-                    .Where(f => !checkOwner || UnixSocketOwner.IsSocketOwnedBy(f, uid))
-                    .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                    .Where(f => IsValidAddressCandidate(f, pid, isRouter: false))
+                    .OrderByDescending(GetCandidateLastWriteTime)
                     .ToArray();
 
                 if (runtimeAddresses.Length == 0)
@@ -450,26 +456,75 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
 
                 string[] dsrouterAddresses = Directory.GetFiles(searchDirectory, string.Format(_dsrouterAddressFormatNonWindows, pid, "*"))
-                    .Where(f => !checkOwner || UnixSocketOwner.IsSocketOwnedBy(f, uid))
-                    .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                    .Where(f => IsValidAddressCandidate(f, pid, isRouter: true))
+                    .OrderByDescending(GetCandidateLastWriteTime)
                     .ToArray();
 
+                // A candidate can be stale or spoofed. Return all candidates so connect can
+                // authenticate each peer and fall back without letting one bad path block attach.
                 // Prefer router sockets when timestamps are equal, matching the prior selection behavior.
                 return dsrouterAddresses
                     .Concat(runtimeAddresses)
-                    .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                    .OrderByDescending(GetCandidateLastWriteTime)
                     .ToArray();
             }
             catch (IOException ex)
             {
-                Trace.TraceWarning($"Unable to resolve diagnostic socket for process {hostPid ?? pid}: {ex.Message}");
+                Trace.TraceWarning($"Unable to resolve diagnostic socket for process {pid}: {ex.Message}");
                 return Array.Empty<string>();
             }
             catch (UnauthorizedAccessException ex)
             {
-                Trace.TraceWarning($"Unable to resolve diagnostic socket for process {hostPid ?? pid}: {ex.Message}");
+                Trace.TraceWarning($"Unable to resolve diagnostic socket for process {pid}: {ex.Message}");
                 return Array.Empty<string>();
             }
+        }
+
+        private static DateTime GetCandidateLastWriteTime(string path)
+        {
+            try
+            {
+                return File.GetLastWriteTime(path);
+            }
+            catch (IOException)
+            {
+                return DateTime.MinValue;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return DateTime.MinValue;
+            }
+        }
+
+        private static bool IsValidAddressCandidate(string path, int pid, bool isRouter)
+        {
+            string fileName = Path.GetFileName(path);
+            string prefix = isRouter
+                ? $"dotnet-diagnostic-dsrouter-{pid.ToString(CultureInfo.InvariantCulture)}-"
+                : $"dotnet-diagnostic-{pid.ToString(CultureInfo.InvariantCulture)}-";
+            const string Suffix = "-socket";
+
+            if (!fileName.StartsWith(prefix, StringComparison.Ordinal) ||
+                !fileName.EndsWith(Suffix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            int keyLength = fileName.Length - prefix.Length - Suffix.Length;
+            if (keyLength <= 0)
+            {
+                return false;
+            }
+
+            for (int i = prefix.Length; i < prefix.Length + keyLength; i++)
+            {
+                if (fileName[i] < '0' || fileName[i] > '9')
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -647,7 +702,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
 
-            string[] addresses = ResolveAddresses(searchDirectory, searchPid, pid);
+            string[] addresses = ResolveAddresses(searchDirectory, searchPid);
             if (addresses.Length != 0)
             {
                 return addresses;

@@ -336,19 +336,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
         public EventPipeSessionController(int pid, string diagnosticPort, List<EventPipeProvider> providers, bool requestRundown = true, EventPipeBufferingMode bufferingMode = EventPipeBufferingMode.Drop)
         {
-            if (string.IsNullOrEmpty(diagnosticPort))
-            {
-                try
-                {
-                    string defaultAddress = PidIpcEndpoint.GetDefaultAddress(pid);
-                    if (!string.IsNullOrEmpty(defaultAddress) && PidIpcEndpoint.IsDefaultAddressDSRouter(pid, defaultAddress))
-                    {
-                        _useWildcardProcessId = true;
-                    }
-                }
-                catch { }
-            }
-
             if (!string.IsNullOrEmpty(diagnosticPort))
             {
                 _diagnosticPort = IpcEndpointConfig.Parse(diagnosticPort);
@@ -369,6 +356,16 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             else
             {
                 _client = new DiagnosticsClient(pid);
+                try
+                {
+                    _useWildcardProcessId = _client.GetProcessInfo().ProcessId != (ulong)pid;
+                }
+                catch (UnsupportedCommandException)
+                {
+                    // ProcessInfo is unavailable before .NET 5. Those runtimes cannot
+                    // be mobile targets behind dsrouter, so PID filtering remains valid.
+                    _useWildcardProcessId = false;
+                }
             }
 
             EventPipeSessionConfiguration sessionConfig = new(providers, 1024, rundownKeyword: requestRundown ? EventPipeSession.DefaultRundownKeyword : 0, requestStackwalk: true, bufferingMode: bufferingMode);
