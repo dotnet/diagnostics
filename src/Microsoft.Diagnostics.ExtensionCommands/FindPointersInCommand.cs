@@ -30,10 +30,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public NativeAddressHelper AddressHelper { get; }
 
-        [Option(Name = "--showAllObjects", Aliases = new string[] { "-a", "--all" }, Help = "Show all objects instead of only objects Pinned on the heap.")]
+        [Option<bool>(Name = "--showAllObjects", Aliases = new string[] { "-a", "--all" }, Help = "Show all objects instead of only objects Pinned on the heap.")]
         public bool ShowAllObjects { get; set; }
 
-        [Argument(Help = "The types of memory to search for pointers to the GC heap.")]
+        [Argument<string[]>(Help = "The types of memory to search for pointers to the GC heap.")]
         public string[] Regions { get; set; }
 
         private const string VtableConst = "vtable for ";

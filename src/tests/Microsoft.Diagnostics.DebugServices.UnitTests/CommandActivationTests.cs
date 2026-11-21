@@ -357,10 +357,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             public ActivationState State { get; }
             public OptionalDependency Optional { get; }
 
-            [Argument]
+            [Argument<string>]
             public string Value { get; set; }
 
-            [Option(Name = "--count")]
+            [Option<int>(Name = "--count")]
             public int Count { get; set; } = 1;
 
             public override void Invoke() => State.Invocations.Add(this);

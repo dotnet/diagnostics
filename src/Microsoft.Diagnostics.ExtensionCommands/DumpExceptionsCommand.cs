@@ -24,16 +24,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public LiveObjectService LiveObjects { get; }
 
-        [Option(Name = "-live")]
+        [Option<bool>(Name = "-live")]
         public bool Live { get; set; }
 
-        [Option(Name = "-dead")]
+        [Option<bool>(Name = "-dead")]
         public bool Dead{ get; set; }
 
-        [Option(Name = "-gen")]
+        [Option<string>(Name = "-gen")]
         public string? Generation { get; set; }
 
-        [Option(Name = "-type")]
+        [Option<string>(Name = "-type")]
         public string? Type { get; set; }
 
         public override void Invoke()

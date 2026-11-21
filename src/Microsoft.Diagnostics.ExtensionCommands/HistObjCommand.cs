@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public GCHistory History { get; }
 
-        [Argument(Name = "object", Help = "The object address to track backwards through GC relocations.")]
+        [Argument<string>(Name = "object", Help = "The object address to track backwards through GC relocations.")]
         public string ObjectAddress { get; set; }
 
         public override void Invoke()

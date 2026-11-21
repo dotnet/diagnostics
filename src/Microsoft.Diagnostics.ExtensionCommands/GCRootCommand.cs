@@ -36,16 +36,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public ManagedFileLineService FileLineService { get; }
 
-        [Option(Name = "-gcgen", Help = "Implementation helper for !findroots.")]
+        [Option<int?>(Name = "-gcgen", Help = "Implementation helper for !findroots.")]
         public int? AsGCGeneration { get; set; }
 
-        [Option(Name="-nostacks", Help ="Do not use stack roots.")]
+        [Option<bool>(Name="-nostacks", Help ="Do not use stack roots.")]
         public bool NoStacks { get; set; }
 
-        [Argument(Name = "target")]
+        [Argument<string>(Name = "target")]
         public string TargetAddress { get; set; }
 
-        [Option(Name = "-limit", Help = "Limits the amount of roots to find")]
+        [Option<int?>(Name = "-limit", Help = "Limits the amount of roots to find")]
         public int? Limit { get; set; }
 
         public override void Invoke()

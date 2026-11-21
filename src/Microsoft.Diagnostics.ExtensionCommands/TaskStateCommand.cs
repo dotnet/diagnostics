@@ -14,10 +14,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
         }
 
-        [Argument(Help = "The Task instance address.")]
+        [Argument<string>(Help = "The Task instance address.")]
         public string Address { get; set; }
 
-        [Option(Name = "--value", Aliases = new string[] { "-v" }, Help = "<value> is the value of a Task m_stateFlags field.")]
+        [Option<ulong?>(Name = "--value", Aliases = new string[] { "-v" }, Help = "<value> is the value of a Task m_stateFlags field.")]
         public ulong? Value { get; set; }
 
         public override void Invoke()

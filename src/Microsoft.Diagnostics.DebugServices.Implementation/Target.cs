@@ -3,10 +3,8 @@
 
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.FileFormats;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -32,7 +30,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // Initialize the per-target services.
             _serviceContainerFactory = host.Services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Target, host.Services);
             _serviceContainerFactory.AddServiceFactory<ITarget>((_) => this);
-            _serviceContainerFactory.AddServiceFactory<Reader>(CreateReader);
         }
 
         protected void Finished()
@@ -117,23 +114,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         #endregion
-
-        /// <summary>
-        /// Create the file format reader used to read and layout TStruct derived structures from memory
-        /// </summary>
-        private static Reader CreateReader(IServiceProvider services)
-        {
-            IMemoryService memoryService = services.GetService<IMemoryService>();
-            Stream stream = memoryService.CreateMemoryStream();
-            LayoutManager layoutManager = new LayoutManager()
-                                            .AddPrimitives()
-                                            .AddEnumTypes()
-                                            .AddSizeT(memoryService.PointerSize)
-                                            .AddPointerTypes()
-                                            .AddNullTerminatedString()
-                                            .AddTStructTypes();
-            return new Reader(new StreamAddressSpace(stream), layoutManager);
-        }
 
         public override bool Equals(object obj)
         {

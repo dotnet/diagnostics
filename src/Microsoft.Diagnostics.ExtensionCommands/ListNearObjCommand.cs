@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IMemoryService MemoryService { get; }
 
-        [Argument(Help = "The address on the GC heap to list near objects")]
+        [Argument<string>(Help = "The address on the GC heap to list near objects")]
         public string Address { get; set; }
 
         public override void Invoke()

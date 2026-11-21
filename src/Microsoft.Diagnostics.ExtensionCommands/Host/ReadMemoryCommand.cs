@@ -25,14 +25,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
             Target = target;
         }
 
-        [Argument(Name = "address", Help = "Address to dump.")]
+        [Argument<string>(Name = "address", Help = "Address to dump.")]
         public string AddressValue
         {
             get => _address?.ToString();
             set => _address = ParseAddress(value);
         }
 
-        [Option(Name = "--end", Aliases = new string[] { "-e" }, Help = "Ending address to dump.")]
+        [Option<string>(Name = "--end", Aliases = new string[] { "-e" }, Help = "Ending address to dump.")]
         public string EndAddressValue
         {
             get => _endAddress?.ToString();
@@ -44,33 +44,33 @@ namespace Microsoft.Diagnostics.Tools.Dump
         // allows a command like "db <address>" to be followed by "d" and the next block is dumped
         // in the remembered format.
 
-        [Option(Name = "--count", Aliases = new string[] { "-c" }, Help = "Number of elements to dump.")]
+        [Option<int>(Name = "--count", Aliases = new string[] { "-c" }, Help = "Number of elements to dump.")]
         public static int Count { get; set; } = 32;
 
-        [Option(Name = "--length", Aliases = new string[] { "-l" }, Help = "Size of elements to dump.")]
+        [Option<int>(Name = "--length", Aliases = new string[] { "-l" }, Help = "Size of elements to dump.")]
         public static int Length { get; set; } = 0;
 
-        [Option(Name = "--width", Aliases = new string[] { "-w" }, Help = "Number of elements to dump per row.")]
+        [Option<int>(Name = "--width", Aliases = new string[] { "-w" }, Help = "Number of elements to dump per row.")]
         public static int Width { get; set; } = 0;
 
-        [Option(Name = "--ascii", Aliases = new string[] { "-a" }, Help = "Print ascii dump as well.")]
+        [Option<bool>(Name = "--ascii", Aliases = new string[] { "-a" }, Help = "Print ascii dump as well.")]
         public static bool Ascii { get; set; } = false;
 
-        [Option(Name = "--unicode", Aliases = new string[] { "-u" }, Help = "Print unicode dump as well.")]
+        [Option<bool>(Name = "--unicode", Aliases = new string[] { "-u" }, Help = "Print unicode dump as well.")]
         public static bool Unicode { get; set; } = false;
 
-        [Option(Name = "--ascii-string", Help = "Print as ascii string as well.")]
+        [Option<bool>(Name = "--ascii-string", Help = "Print as ascii string as well.")]
         public static bool AsciiString { get; set; } = false;
 
-        [Option(Name = "--unicode-string", Help = "Print as unicode string as well.")]
+        [Option<bool>(Name = "--unicode-string", Help = "Print as unicode string as well.")]
         public static bool UnicodeString { get; set; } = false;
 
         // ****************************************************************************************
 
-        [Option(Name = "--hex-prefix", Aliases = new string[] { "-h" }, Help = "Add a hex prefix (0x) to the data displayed.")]
+        [Option<bool>(Name = "--hex-prefix", Aliases = new string[] { "-h" }, Help = "Add a hex prefix (0x) to the data displayed.")]
         public bool HexPrefix { get; set; } = false;
 
-        [Option(Name = "--show-address", Help = "Display the addresses of data found.")]
+        [Option<bool>(Name = "--show-address", Help = "Display the addresses of data found.")]
         public bool ShowAddress { get; set; } = true;
 
         public IMemoryService MemoryService { get; }

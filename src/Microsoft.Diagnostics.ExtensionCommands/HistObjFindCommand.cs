@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public GCHistory History { get; }
 
-        [Argument(Name = "object", Help = "The object address to search for in the stress log.")]
+        [Argument<string>(Name = "object", Help = "The object address to search for in the stress log.")]
         public string ObjectAddress { get; set; }
 
         public override void Invoke()

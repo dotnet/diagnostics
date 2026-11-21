@@ -16,13 +16,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ContextService = contextService;
         }
 
-        [Argument(Help = "The thread index or id to set, otherwise displays the list of threads.")]
+        [Argument<uint?>(Help = "The thread index or id to set, otherwise displays the list of threads.")]
         public uint? Thread { get; set; } = null;
 
-        [Option(Name = "--tid", Aliases = new string[] { "-t" }, Help = "<thread> is an OS thread id.")]
+        [Option<bool>(Name = "--tid", Aliases = new string[] { "-t" }, Help = "<thread> is an OS thread id.")]
         public bool ThreadId { get; set; }
 
-        [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
+        [Option<bool>(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
 
         public IThreadService ThreadService { get; }

@@ -28,25 +28,25 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private const string ListFlag = "-list";
         private const string BySizeFlag = "-orderBySize";
 
-        [Option(Name = SummaryFlag, Aliases = new string[] { "-stat", }, Help = "Only print summary table.")]
+        [Option<bool>(Name = SummaryFlag, Aliases = new string[] { "-stat", }, Help = "Only print summary table.")]
         public bool Summary { get; set; }
 
-        [Option(Name = ImagesFlag, Help = "Prints a summary table of image memory usage.")]
+        [Option<bool>(Name = ImagesFlag, Help = "Prints a summary table of image memory usage.")]
         public bool ShowImageTable { get; set; }
 
-        [Option(Name = ReserveFlag, Help = "Include MEM_RESERVE regions in the output.")]
+        [Option<bool>(Name = ReserveFlag, Help = "Include MEM_RESERVE regions in the output.")]
         public bool IncludeReserveMemory { get; set; }
 
-        [Option(Name = ReserveHeuristicFlag, Help = "Heuristically tag MEM_RESERVE regions based on adjacent memory regions.")]
+        [Option<bool>(Name = ReserveHeuristicFlag, Help = "Heuristically tag MEM_RESERVE regions based on adjacent memory regions.")]
         public bool TagReserveMemoryHeuristically { get; set; }
 
-        [Option(Name = ForceHandleTableFlag, Help = "We only tag the HandleTable if we can do so efficiently on newer runtimes.  This option ensures we always tag HandleTable memory, even if it will take a long time.")]
+        [Option<bool>(Name = ForceHandleTableFlag, Help = "We only tag the HandleTable if we can do so efficiently on newer runtimes.  This option ensures we always tag HandleTable memory, even if it will take a long time.")]
         public bool IncludeHandleTableIfSlow { get; set; }
 
-        [Option(Name = BySizeFlag, Help = "List the raw addresses by size, not by base address.")]
+        [Option<bool>(Name = BySizeFlag, Help = "List the raw addresses by size, not by base address.")]
         public bool BySize { get; set; }
 
-        [Option(Name = ListFlag, Help = "A separated list of memory regions to list allocations for.")]
+        [Option<string>(Name = ListFlag, Help = "A separated list of memory regions to list allocations for.")]
         public string List { get; set; }
 
         public NativeAddressHelper AddressHelper { get; }
