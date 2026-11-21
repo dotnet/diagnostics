@@ -18,6 +18,13 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "dq", DefaultOptions = "--ascii:false --unicode:false --ascii-string:false --unicode-string:false -c:32  -l:8  -w:0", Help = "Dumps memory as qwords (ulong).")]
     public sealed class ReadMemoryCommand : CommandBase
     {
+        public ReadMemoryCommand(IServiceProvider services, IMemoryService memoryService, ITarget target)
+            : base(services)
+        {
+            MemoryService = memoryService;
+            Target = target;
+        }
+
         [Argument(Name = "address", Help = "Address to dump.")]
         public string AddressValue
         {
@@ -66,11 +73,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
         [Option(Name = "--show-address", Help = "Display the addresses of data found.")]
         public bool ShowAddress { get; set; } = true;
 
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
+        public IMemoryService MemoryService { get; }
 
-        [ServiceImport]
-        public ITarget Target { get; set; }
+        public ITarget Target { get; }
 
         private ulong? _address;
         private ulong? _endAddress;

@@ -17,7 +17,6 @@ namespace SOS.Hosting {
     /// <summary>
     /// Helper code to hosting the native SOS code
     /// </summary>
-    [ServiceExport(Scope = ServiceScope.Target)]
     public sealed class SOSHost : IDisposable
     {
        /// <summary>
@@ -38,22 +37,15 @@ namespace SOS.Hosting {
         internal readonly ITarget Target;
         internal readonly IMemoryService MemoryService;
 
-#pragma warning disable CS0649
-        [ServiceImport]
         internal readonly IConsoleService ConsoleService;
 
-        [ServiceImport]
         internal readonly IContextService ContextService;
 
-        [ServiceImport]
         internal readonly IModuleService ModuleService;
 
-        [ServiceImport]
         internal readonly IThreadService ThreadService;
 
-        [ServiceImport]
         private readonly SOSLibrary _sosLibrary;
-#pragma warning restore
 
         private readonly IntPtr _client;
         private readonly ulong _ignoreAddressBitsMask;
@@ -61,11 +53,24 @@ namespace SOS.Hosting {
         /// <summary>
         /// Create an instance of the hosting class. Has the lifetime of the target.
         /// </summary>
-        public SOSHost(ITarget target, IMemoryService memoryService, [ServiceImport(Optional = true)] INativeDebugger nativeDebugger)
+        public SOSHost(
+            ITarget target,
+            IMemoryService memoryService,
+            IConsoleService consoleService,
+            IContextService contextService,
+            IModuleService moduleService,
+            IThreadService threadService,
+            SOSLibrary sosLibrary,
+            INativeDebugger nativeDebugger = null)
         {
             Target = target;
             MemoryService = memoryService;
-            _ignoreAddressBitsMask = memoryService.SignExtensionMask();
+            ConsoleService = consoleService;
+            ContextService = contextService;
+            ModuleService = moduleService;
+            ThreadService = threadService;
+            _sosLibrary = sosLibrary;
+            _ignoreAddressBitsMask = MemoryService.SignExtensionMask();
 
             // If running under a native debugger, use the client instance supplied by the debugger for commands
             if (nativeDebugger != null)

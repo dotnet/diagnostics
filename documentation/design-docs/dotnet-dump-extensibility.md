@@ -111,7 +111,9 @@ The threading model is single-threaded mainly because native debuggers like dbge
 
 The host is the debugger or program the command and the infrastructure runs on. The goal is to allow the same code for a command to run under different programs like the dotnet-dump REPL, lldb and Windows debuggers. Under Visual Studio the host will be a VS extension package.
 
-When the host starts, the service manager loads command and service extension assemblies from the DOTNET_DIAGNOSTIC_EXTENSIONS environment variable (assembly paths separated by ';' on Windows or ":" on Linux/MacOS) or under the subdirectory "extensions" in the same directory as the infrastructure assemblies (Microsoft.Diagnostics.DebugServices.Implementation).
+Each contributing assembly has one registration file containing an `IDiagnosticsModule` implementation. `CoreModule`, `SOSHostingModule`, and `AnalysisModule` contain the built-in service and command registrations. `Host` explicitly registers the core module; dotnet-dump and SOS.Extensions each directly register native SOS hosting before managed analysis, preserving command fallback order. Dotnet-dump registers its host-specific SOS dispatch and exit commands together after module commands so its host commands take precedence over contributed commands with the same names or aliases.
+
+Applications that compile additional assemblies into their host explicitly construct and register their modules at the composition root before creating the global service container. Native debugger hosts pass additional modules through `HostServices.InitializeWithModules`; managed hosts call `ServiceManager.RegisterModule` directly. The host then calls `ServiceManager.RegisterCommands` to register commands from those same instances. Registration does not scan assemblies, attributes, or types. Runtime extension DLL discovery and loading have been removed: `DOTNET_DIAGNOSTIC_EXTENSIONS` and the `extensions` subdirectory are no longer used.
 
 #### IHost
 
@@ -147,13 +149,63 @@ For Visual Studio, the base memory, module, thread services will be implemented 
 
 Services can be registered to contain common code for commands like [ClrMDHelper](../../src/Microsoft.Diagnostics.ExtensionCommands/ClrMDHelper.cs) or host or target functionality like ISymbolService or IMemoryService.
 
-The [ServiceExport](../../src/Microsoft.Diagnostics.DebugServices/ServiceExportAttribute.cs) attribute is used to mark classes, class constructors and factory methods to be registered as services. The ServiceScope defines where in the service hierarchy (global, context, target, runtime, thread, or module) this instance is available to commands and other services.
+The [IServiceRegistry](../../src/Microsoft.Diagnostics.DebugServices/IServiceRegistry.cs) contract registers lazy service factories and provider factories through generic `AddServiceFactory<TService>` and `AddProviderFactory<TProvider>` methods. Their `Func<IServiceProvider, T>` delegates enforce the registered result type at compile time and may return `null` for unavailable services. `ServiceScope` defines where in the service hierarchy (global, context, target, runtime, thread, or module) a service instance is available. Ordinary services use typed registrations, with constructor dependencies supplied by `ActivatorUtilities` from `Microsoft.Extensions.DependencyInjection.Abstractions`:
 
-The [ProviderExport](../../src/Microsoft.Diagnostics.DebugServices/ProviderExportAttribute.cs) attribute is used to mark classes, class constructors and factory methods to be registered as "provider" which are extensions to a service. The IRuntimeService implementation uses this feature to enumerate all the IRuntimeProvider instances registered in the system.
+Typed registration creates and caches an activation delegate, not a service instance: each container lazily creates and caches its instances. Provider factories remain an ordered collection, allowing `IRuntimeService` to enumerate multiple `IRuntimeProvider` implementations.
 
-The [ServiceImport](../../src/Microsoft.Diagnostics.DebugServices/ServiceImportAttribute.cs) attribute is used to mark public or interal fields, properties and methods in commands and other services to receive a service instance.
+An assembly registers its services and commands together in one module file. The base host does not need to know the contributed types:
 
-The internal [ServiceManager](../../src/Microsoft.Diagnostics.DebugServices.Implementation/ServiceManager.cs) loads extension assemblies, provides the dependency injection using reflection (via the above attributes) and manages the various service factories. It creates the [ServiceContainerFactory](../../src/Microsoft.Diagnostics.DebugServices/ServiceContainerFactory.cs) instances for the extension points globally, in targets, modules, threads and runtimes (i.e. the IRuntime.ServiceProvider property). From the ServiceContainerFactory [ServiceContainer](../../src/Microsoft.Diagnostics.DebugServices/ServiceContainer.cs) instances are built. The public [IServiceManager](../../src/Microsoft.Diagnostics.DebugServices/IServiceManager.cs) interface exposes the public methods of the manager.
+```csharp
+using Microsoft.Diagnostics.DebugServices;
+
+public sealed class MyModule : IDiagnosticsModule
+{
+    public void RegisterServices(IServiceRegistry registry)
+    {
+        registry.AddService<IMyService, MyService>(ServiceScope.Target);
+        registry.AddService<MyHelper>(ServiceScope.Runtime);
+        registry.AddProvider<IRuntimeProvider, MyRuntimeProvider>();
+    }
+
+    public void RegisterCommands(ICommandService commands)
+    {
+        commands.AddCommands<MyCommand>();
+        commands.AddCommands<MyOtherCommand>();
+    }
+}
+```
+
+Managed hosts explicitly construct and register each additional module after the built-in modules and before creating the global service container. `Host.CreateServiceContainer` only finalizes the service factories and creates the global container. Command registration remains a separate step:
+
+```csharp
+host.ServiceManager.RegisterModule(new MyModule());
+ServiceContainer services = host.CreateServiceContainer();
+host.ServiceManager.RegisterCommands(commandService);
+```
+
+`ServiceManager.RegisterCommands` calls `RegisterCommands` once per command service, using the same module instances and order. Modules may register services at any scope or add ordered provider factories. Their constructors do not need to be public or parameterless because the composition root constructs them directly. A services-only or commands-only module leaves its other registration method empty. Registration and construction failures propagate to the caller.
+
+`ServiceManager.RegisterModule` preserves explicit registration order and registers each module type only once per manager. Module and service instances are not shared between hosts.
+
+`IServiceManager.DiagnosticModules` exposes the successfully registered module instances in registration order. `sosstatus` displays their fully qualified type names and assembly versions, including both built-in and additional modules, without relying on assembly file locations.
+
+Direct module registration, command registration, and service finalization are public startup operations on `ServiceManager`; hosts do not require friend access.
+
+NativeAOT applications must reference each contributing assembly and pass its module instance from their managed entry point so the compiler includes and retains it. Native debugger hosts call `HostServices.InitializeWithModules`; the reflection-bound `HostServices.Initialize(string)` entry point passes none and must remain the only method with that name:
+
+```csharp
+return HostServices.InitializeWithModules(extensionPath, new IDiagnosticsModule[] { new MyModule() });
+```
+
+A module registered after service finalization is rejected. No DLLs are discovered or loaded from disk.
+
+Constructor injection requires a public constructor. Required dependencies must be available from the container; optional dependencies can use constructor parameter defaults. The typed registration helpers preserve public constructor metadata for trimming and NativeAOT, where `ActivatorUtilities` uses its non-code-generating activation path. Services no longer use the repository's reflected constructor/member injection. Special cases, including factories that conditionally return `null` and native library initialization through `SOSLibrary.TryCreate`, use `AddServiceFactory<T>` with an explicit factory.
+
+The existing parent-container lookup, service invalidation, and disposal lifetimes are unchanged: `ActivatorUtilities` handles construction, not scope or ownership. This makes service registration and activation suitable for NativeAOT, but does not establish NativeAOT support for the entire host: command metadata, argument/option binding, and attribute-selected method invocation still use reflection on explicitly registered types, and arbitrary managed extension DLL loading is not supported by NativeAOT.
+
+Service and provider export attributes, assembly scanning, and member-based service imports have been removed. Services and commands receive their dependencies through constructors.
+
+The [ServiceManager](../../src/Microsoft.Diagnostics.DebugServices.Implementation/ServiceManager.cs) implements both the registration contract and [IServiceManager](../../src/Microsoft.Diagnostics.DebugServices/IServiceManager.cs). It creates [ServiceContainerFactory](../../src/Microsoft.Diagnostics.DebugServices/ServiceContainerFactory.cs) instances for the scopes, from which [ServiceContainer](../../src/Microsoft.Diagnostics.DebugServices/ServiceContainer.cs) instances are built.
 
 ### IDumpTargetFactory
 
@@ -166,6 +218,18 @@ See [IDumpTargetFactory.cs](../../src/Microsoft.Diagnostics.DebugServices/IDumpT
 This service provides the parsing, dispatching and executing of standardized commands. It is implemented using System.Commandline but there should be no dependencies on System.CommandLine exposed to the commands or other services. It is an implementation detail.
 
 See [ICommandService.cs](../../src/Microsoft.Diagnostics.DebugServices/ICommandService.cs)
+
+Commands are registered in the same module file as services, through its `RegisterCommands` method:
+
+```csharp
+public void RegisterCommands(ICommandService commands)
+{
+    commands.AddCommands<MyCommand>();
+    commands.AddCommands<MyOtherCommand>();
+}
+```
+
+Add each new built-in analysis command to `AnalysisModule.RegisterCommands`, and each native SOS wrapper command type to `SOSHostingModule.RegisterCommands`. Registration order matters when command names overlap: later registrations take precedence, with the existing filters allowing fallback to earlier implementations. Attributes still define names, aliases, help, arguments, options, and filters on each registered type; module discovery does not replace this per-type metadata.
 
 ### IConsoleService
 
@@ -289,23 +353,32 @@ On Windows, it provides the debugger services (IDebuggerServices) to SOS.Extensi
 
 Writing a new SOS command is a lot easier now that they are written C# with easy access to various services and the CLRMD API. 
 
-The first step is to decide whether you want the new command to be part of the existing set of "built-in" commands (part of the Microsoft.Diagnostics.ExtensionCommands assembly) or in your own command assembly that can be loaded when the host starts by the service manager (set the Hosts section on the details).
+The first step is to decide whether you want the new command to be part of the existing set of "built-in" commands (part of the Microsoft.Diagnostics.ExtensionCommands assembly) or in your own referenced project or NuGet package. Built-in commands must be added to `AnalysisModule.RegisterCommands`. A separate assembly defines an `IDiagnosticsModule` that registers both services and commands; each consuming application's entry point explicitly constructs and registers that module.
 
 Command and service assembly must be have a netstandard2.0 TargetFramework to run on .NET Framework hosts like VS.
 
 The next step is to create a public class that inherits from the CommandBase helper class like:
 
 ```C#
+using System;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
+
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "clrmodules", Help = "Lists the managed modules in the process.")]
     public class ClrModulesCommand : CommandBase
     {
-        [ServiceImport(Optional = true)]
-        public ClrRuntime Runtime { get; set; }
+        public ClrModulesCommand(IServiceProvider services, IModuleService moduleService, ClrRuntime runtime = null)
+            : base(services)
+        {
+            ModuleService = moduleService;
+            Runtime = runtime;
+        }
 
-        [ServiceImport]
-        public IModuleService ModuleService { get; set; }
+        public ClrRuntime Runtime { get; }
+
+        public IModuleService ModuleService { get; }
 
         [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on module name (path not included).")]
         public string ModuleName { get; set; }
@@ -320,7 +393,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 }
 ```
 
-The "Command" attribute on the class provides the command name and help.  The "ServiceImport" attribute on the properties indicates what services are needed by the command. It can be marked as optional. The default is that the service is required. The Option attributes define the various command line option names, aliases and help. When the command is executed the service, argument and option properties are set and the "Invoke" function is called.
+The "Command" attribute on the class provides the command name and help. `AddCommands<TCommand>()` registers a reference type whose execution method is marked with `CommandInvoke`. `CommandBase` supplies that attribute on its abstract `Invoke` method; commands may also declare their own attributed methods without inheriting the base class. There is no command-interface requirement or runtime-Type registration overload.
+
+`ICommandService` exposes only `AddCommands<TCommand>(Func<IServiceProvider, TCommand>)`; the factory is required and must return a command instance. The parameterless `AddCommands<TCommand>()` extension supplies a cached `ActivatorUtilities` factory, creating a fresh instance for each invocation. Public constructor parameters declare required dependencies; parameter defaults allow optional services. `CommandBase` initializes its read-only `Services` and `Console` properties from the supplied provider.
+
+The Option and Argument attributes define command-line binding. Only argument and option properties are set after construction, before the execution method is called. Generic registrations preserve public constructor, method, and property metadata for trimming, but command metadata, option binding, and attribute-selected method invocation still use reflection; typed registration alone does not make the command pipeline NativeAOT-compatible.
+
+Methods marked with `CommandInvoke`, `HelpInvoke`, or `FilterInvoke` can declare service parameters resolved from the current `IServiceProvider`. An `IServiceProvider` parameter receives the current provider itself. Unavailable services use declared parameter defaults; parameters without defaults are required and produce a `DiagnosticsException` when their service is unavailable. Registered services take precedence over defaults. Callbacks must be non-generic and cannot take by-reference or pointer parameters. Static attributed methods receive injected services without creating a command, so a filter can reject an unsupported command before its required constructor dependencies are requested. Instance filters and help methods retain constructor injection and can also receive method parameters. For example:
+
+```csharp
+[FilterInvoke(Message = "No CLR runtime found.")]
+public static bool FilterInvoke(ClrRuntime runtime = null) =>
+    runtime != null;
+```
 
 ## How to write a service
 
@@ -328,4 +413,3 @@ TBD
 
 ```C#
 ```
-

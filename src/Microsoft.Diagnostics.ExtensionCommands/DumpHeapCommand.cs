@@ -12,14 +12,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumpheap", Aliases = new[] { "DumpHeap" }, Help = "Displays a list of all managed objects.")]
     public class DumpHeapCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
+        public DumpHeapCommand(IServiceProvider services, IMemoryService memoryService, LiveObjectService liveObjects, DumpHeapService dumpHeap)
+            : base(services)
+        {
+            MemoryService = memoryService;
+            LiveObjects = liveObjects;
+            DumpHeap = dumpHeap;
+        }
 
-        [ServiceImport]
-        public LiveObjectService LiveObjects { get; set; }
+        public IMemoryService MemoryService { get; }
 
-        [ServiceImport]
-        public DumpHeapService DumpHeap { get; set; }
+        public LiveObjectService LiveObjects { get; }
+
+        public DumpHeapService DumpHeap { get; }
 
         [Option(Name = "-mt")]
         public string MethodTableString { get; set; }

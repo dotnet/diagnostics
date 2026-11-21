@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Xunit;
 
 namespace Microsoft.Diagnostics.ExtensionCommands.UnitTests
@@ -17,7 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands.UnitTests
         public void SetClrPathRejectsRemoteDirectory(string path)
         {
             TestRuntime runtime = new();
-            SetClrPath command = new() { Console = new NullConsole(), Runtime = runtime, Argument = path };
+            SetClrPath command = CreateCommand(runtime, path);
 
             Assert.Throws<DiagnosticsException>(command.Invoke);
             Assert.Null(runtime.RuntimeModuleDirectory);
@@ -28,11 +29,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands.UnitTests
         {
             TestRuntime runtime = new();
             string directory = System.IO.Path.GetTempPath();
-            SetClrPath command = new() { Console = new NullConsole(), Runtime = runtime, Argument = directory };
+            SetClrPath command = CreateCommand(runtime, directory);
 
             command.Invoke();
 
             Assert.Equal(System.IO.Path.GetFullPath(directory), runtime.RuntimeModuleDirectory);
+        }
+
+        private static SetClrPath CreateCommand(IRuntime runtime, string argument)
+        {
+            ServiceContainer services = new(null);
+            services.AddService<IConsoleService>(new NullConsole());
+            return new SetClrPath(services, runtime) { Argument = argument };
         }
 
         private sealed class NullConsole : IConsoleService

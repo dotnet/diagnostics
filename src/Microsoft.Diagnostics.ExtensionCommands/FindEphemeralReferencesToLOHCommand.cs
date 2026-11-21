@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,6 +15,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "ephtoloh", Help = "Finds ephemeral objects which reference the large object heap.")]
     public class FindEphemeralReferencesToLOHCommand : ClrRuntimeCommandBase
     {
+        public FindEphemeralReferencesToLOHCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         // IComparer for binary search
         private readonly IComparer<(ClrObject, ClrObject)> _firstObjectComparer = Comparer<(ClrObject, ClrObject)>.Create((x, y) => x.Item1.Address.CompareTo(y.Item1.Address));
 

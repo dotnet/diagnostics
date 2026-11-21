@@ -7,7 +7,6 @@ using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
-    [ProviderExport(Type = typeof(IRuntimeDescriptionProvider))]
     public sealed class SingleFileRuntimeDiscoveryProvider : IRuntimeDescriptionProvider
     {
         private readonly RuntimeDescriptionBuilder _builder;

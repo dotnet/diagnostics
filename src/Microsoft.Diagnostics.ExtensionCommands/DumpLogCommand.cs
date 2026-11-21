@@ -16,6 +16,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumplog", Aliases = new[] { "DumpLog" }, Help = "Writes the contents of an in-memory stress log to a file.")]
     public sealed class DumpLogCommand : ClrRuntimeCommandBase
     {
+        public DumpLogCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         [Argument(Name = "filename", Help = "The file to write the stress log to. Defaults to StressLog.txt in the current directory.")]
         public string FileName { get; set; }
 

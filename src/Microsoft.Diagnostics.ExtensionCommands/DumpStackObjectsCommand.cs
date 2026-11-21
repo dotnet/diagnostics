@@ -18,14 +18,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumpstackobjects", Aliases = new string[] { "dso", "DumpStackObjects" }, Help = "Displays all managed objects found within the bounds of the current stack.")]
     public class DumpStackObjectsCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
+        public DumpStackObjectsCommand(IServiceProvider services, IMemoryService memoryService, IThread currentThread, IThreadService threadService)
+            : base(services)
+        {
+            MemoryService = memoryService;
+            CurrentThread = currentThread;
+            ThreadService = threadService;
+        }
 
-        [ServiceImport]
-        public IThread CurrentThread { get; set; }
+        public IMemoryService MemoryService { get; }
 
-        [ServiceImport]
-        public IThreadService ThreadService { get; set; }
+        public IThread CurrentThread { get; }
+
+        public IThreadService ThreadService { get; }
 
         [Option(Name = "-verify", Help = "Verify each object and only print ones that are valid objects.")]
         public bool Verify { get; set; }

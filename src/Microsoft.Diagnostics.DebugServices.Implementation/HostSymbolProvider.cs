@@ -12,7 +12,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <see cref="IClrSymbolProvider"/> contract: symbol name/address resolution
     /// plus type field-offset lookups (backed by the debugger's type system).
     /// </summary>
-    [ServiceExport(Type = typeof(IClrSymbolProvider), Scope = ServiceScope.Target)]
     public sealed class HostSymbolProvider : IClrSymbolProvider
     {
         private readonly IModuleService _moduleService;
