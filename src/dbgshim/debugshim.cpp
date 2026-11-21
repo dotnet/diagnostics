@@ -1266,8 +1266,8 @@ static HRESULT DacCreateInstance(
 }
 
 // Resolves the address of the runtime module's exported DotNetRuntimeContractDescriptor symbol.
-// Returns S_OK with *pContractDescriptor set to the non-zero address on success. A failed HRESULT
-// (with *pContractDescriptor == 0) means the descriptor could not be resolved.
+// Returns S_OK with *pContractDescriptor set to the non-zero address on success, or
+// CDAC_E_DESCRIPTOR_NOT_FOUND (with *pContractDescriptor == 0) if the module does not export it.
 static HRESULT TryGetContractDescriptorAddress(
     ULONG64 moduleBaseAddress,
     IUnknown* pDataTarget,
@@ -1303,7 +1303,7 @@ static HRESULT TryGetContractDescriptorAddress(
             *pContractDescriptor = symbolAddress;
             return S_OK;
         }
-        return E_FAIL;
+        return CDAC_E_DESCRIPTOR_NOT_FOUND;
     }
 #endif // HOST_WINDOWS
     if (TryGetSymbol(pCorDbgDataTarget, moduleBaseAddress, symbolName, &symbolAddress))
@@ -1311,7 +1311,7 @@ static HRESULT TryGetContractDescriptorAddress(
         *pContractDescriptor = symbolAddress;
         return S_OK;
     }
-    return E_FAIL;
+    return CDAC_E_DESCRIPTOR_NOT_FOUND;
 }
 
 // Loads the cDAC universal binary and activates the requested data-access interface. Prefers the
@@ -1380,11 +1380,19 @@ HRESULT CLRDebuggingImpl::OpenDataAccessProcess(
         // succeed, so we skip cDAC entirely and let the legacy DAC fallback handle the target.
         SString cdacPath;
         ULONG64 contractDescriptor = 0;
-        if (GetCDacPath(cdacPath) &&
-            SUCCEEDED(TryGetContractDescriptorAddress(moduleBaseAddress, pDataTarget, &contractDescriptor)))
+        DWORD cdacAttributes = GetCDacPath(cdacPath) ? GetFileAttributesW(cdacPath) : INVALID_FILE_ATTRIBUTES;
+        if (cdacAttributes == INVALID_FILE_ATTRIBUTES || (cdacAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
         {
-            cdacHr = CDacCreateInstanceFromContractDescriptor(
-                cdacPath.GetUnicode(), pDataTarget, contractDescriptor, riid, ppInstance);
+            cdacHr = CORDBG_E_DEBUG_COMPONENT_MISSING;
+        }
+        else
+        {
+            cdacHr = TryGetContractDescriptorAddress(moduleBaseAddress, pDataTarget, &contractDescriptor);
+            if (SUCCEEDED(cdacHr))
+            {
+                cdacHr = CDacCreateInstanceFromContractDescriptor(
+                    cdacPath.GetUnicode(), pDataTarget, contractDescriptor, riid, ppInstance);
+            }
         }
         if (FAILED(cdacHr))
         {
