@@ -438,6 +438,53 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             object ICommandValueFactory.CreateOption<T>(string name, string[] aliases) => new Option<T>(name, aliases);
 
+            [RequiresDynamicCode("Legacy non-generic command attributes require runtime generic instantiation.")]
+            [RequiresUnreferencedCode("Legacy non-generic command attributes require constructors that cannot be statically determined.")]
+            object ICommandValueFactory.CreateArgument(Type type, string name)
+            {
+                try
+                {
+                    Type argumentType = typeof(Argument<>).MakeGenericType(type);
+                    ConstructorInfo constructor = argumentType.GetConstructor([typeof(string)]);
+                    if (constructor is null)
+                    {
+                        throw CreateLegacyAttributeException(nameof(ArgumentAttribute), null);
+                    }
+                    return constructor.Invoke([name]);
+                }
+                catch (NotSupportedException ex)
+                {
+                    throw CreateLegacyAttributeException(nameof(ArgumentAttribute), ex);
+                }
+            }
+
+            [RequiresDynamicCode("Legacy non-generic command attributes require runtime generic instantiation.")]
+            [RequiresUnreferencedCode("Legacy non-generic command attributes require constructors that cannot be statically determined.")]
+            object ICommandValueFactory.CreateOption(Type type, string name, string[] aliases)
+            {
+                try
+                {
+                    Type optionType = typeof(Option<>).MakeGenericType(type);
+                    ConstructorInfo constructor = optionType.GetConstructor([typeof(string), typeof(string[])]);
+                    if (constructor is null)
+                    {
+                        throw CreateLegacyAttributeException(nameof(OptionAttribute), null);
+                    }
+                    return constructor.Invoke([name, aliases]);
+                }
+                catch (NotSupportedException ex)
+                {
+                    throw CreateLegacyAttributeException(nameof(OptionAttribute), ex);
+                }
+            }
+
+            private static NotSupportedException CreateLegacyAttributeException(string attributeName, Exception innerException)
+            {
+                return new NotSupportedException(
+                    $"The non-generic {attributeName} requires dynamic code. Recompile the command using {attributeName}<T>.",
+                    innerException);
+            }
+
             internal string GetDetailedHelp(Command command, IServiceProvider services, int windowWidth)
             {
                 StringWriter console = new();

@@ -196,11 +196,20 @@ namespace Microsoft.FileFormats.Tests
             existing.AddLayout(custom);
             existing.RegisterTStruct<RegisteredScenarios.Ordered>();
             Assert.Throws<ArgumentException>(() => existing.RegisterTStruct<RegisteredScenarios.Ordered>());
-            layouts.RegisterArray<byte>();
-            Assert.Throws<ArgumentException>(() => layouts.RegisterArray<byte>());
             layouts.RegisterPointer<Pointer<byte, uint>, byte, uint>();
             Assert.Throws<ArgumentException>(() => layouts.RegisterPointer<Pointer<byte, uint>, byte, uint>());
             Assert.Throws<LayoutException>(() => layouts.RegisterPointer<Pointer<byte, short>, byte, short>());
+        }
+
+        [Fact]
+        public void AllowDuplicateArrayRegistrations()
+        {
+            LayoutManager layouts = new LayoutManager().AddPrimitives()
+                .RegisterArray<ushort>()
+                .RegisterArray<ushort>()
+                .RegisterTStruct<RegisteredScenarios.FixedPrimitiveArray>();
+
+            Assert.NotNull(layouts.GetLayout<RegisteredScenarios.FixedPrimitiveArray>());
         }
 
         [Fact]

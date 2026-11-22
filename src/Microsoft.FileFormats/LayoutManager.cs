@@ -83,7 +83,11 @@ namespace Microsoft.FileFormats
         /// <summary>Registers typed allocation for fixed array fields whose elements have a layout.</summary>
         public LayoutManager RegisterArray<T>()
         {
-            _arrayFactories.Add(typeof(T[]), (manager, count) => manager.CreateArrayLayout<T>(count));
+            Type arrayType = typeof(T[]);
+            if (!_arrayFactories.ContainsKey(arrayType))
+            {
+                _arrayFactories.Add(arrayType, (manager, count) => manager.CreateArrayLayout<T>(count));
+            }
             return this;
         }
 

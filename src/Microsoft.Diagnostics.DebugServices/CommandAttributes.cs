@@ -8,7 +8,11 @@ namespace Microsoft.Diagnostics.DebugServices
 {
     public interface ICommandValueFactory
     {
+        object CreateArgument(Type type, string name);
+
         object CreateArgument<T>(string name);
+
+        object CreateOption(Type type, string name, string[] aliases);
 
         object CreateOption<T>(string name, string[] aliases);
     }
@@ -60,7 +64,7 @@ namespace Microsoft.Diagnostics.DebugServices
     /// Marks the property as a Option.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
-    public abstract class OptionAttribute : Attribute
+    public class OptionAttribute : Attribute
     {
         /// <summary>
         /// Name of the option i.e "--pid"
@@ -77,7 +81,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         public string[] Aliases = Array.Empty<string>();
 
-        public abstract object Create(ICommandValueFactory factory, Type propertyType, string name);
+        public virtual object Create(ICommandValueFactory factory, Type propertyType, string name)
+        {
+            return factory.CreateOption(propertyType, name, Aliases);
+        }
     }
 
     /// <summary>
@@ -100,7 +107,7 @@ namespace Microsoft.Diagnostics.DebugServices
     /// Marks the property the command Argument.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
-    public abstract class ArgumentAttribute : Attribute
+    public class ArgumentAttribute : Attribute
     {
         /// <summary>
         /// Name of the argument
@@ -112,7 +119,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         public string Help;
 
-        public abstract object Create(ICommandValueFactory factory, Type propertyType, string name);
+        public virtual object Create(ICommandValueFactory factory, Type propertyType, string name)
+        {
+            return factory.CreateArgument(propertyType, name);
+        }
     }
 
     /// <summary>
