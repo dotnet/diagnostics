@@ -111,6 +111,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        [ConditionalTheory(nameof(IsUnix))]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("invalid\0directory")]
+        public void TryResolveAddress_InvalidDirectory_ReturnsFalse(string directory)
+        {
+            Assert.False(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out string address));
+            Assert.Null(address);
+        }
+
         [ConditionalFact(nameof(IsUnix))]
         public void TryResolveAddress_PreservesRouterTimestampSelection()
         {
@@ -265,6 +275,50 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.Contains(Environment.ProcessId, DiagnosticsClient.GetPublishedProcesses());
         }
 
+        [ConditionalFact(nameof(IsLinux))]
+        public async Task GetPublishedProcesses_EmptyTargetTmpdir_FindsTarget()
+        {
+            TestConfiguration config = (TestConfiguration)SpoofConfigurations.First()[0];
+            DebuggeeConfiguration debuggee = await DebuggeeCompiler.Execute(config, "Tracee", _output);
+            bool useHost = !string.IsNullOrWhiteSpace(config.HostExe);
+            string executable = useHost ? config.HostExe : debuggee.BinaryExePath;
+            string arguments = useHost ? $"{config.HostArgs} \"{debuggee.BinaryExePath}\" unused-pipe" : "unused-pipe";
+            ProcessStartInfo psi = new(executable, arguments) { UseShellExecute = false };
+            psi.Environment["DOTNET_ROOT"] = config.DotNetRoot;
+            psi.Environment["TMPDIR"] = string.Empty;
+
+            using Process child = Process.Start(psi);
+            string socketPath = null;
+            try
+            {
+                bool found = false;
+                for (int attempt = 0; attempt < 100 && !found; attempt++)
+                {
+                    found = PidIpcEndpoint.TryResolveAddress("/tmp/", child.Id, out socketPath);
+                    if (!found)
+                    {
+                        await Task.Delay(100);
+                    }
+                }
+
+                Assert.True(found, "Target diagnostic socket was not created.");
+                Assert.Contains(child.Id, DiagnosticsClient.GetPublishedProcesses());
+                Assert.Equal((ulong)child.Id, new DiagnosticsClient(child.Id).GetProcessInfo().ProcessId);
+            }
+            finally
+            {
+                if (!child.HasExited)
+                {
+                    child.Kill();
+                    child.WaitForExit();
+                }
+                if (socketPath != null)
+                {
+                    File.Delete(socketPath);
+                }
+            }
+        }
+
         [ConditionalFact(nameof(IsNotLinux))]
         public void TryResolveAddress_Windows_NamedPipeAddressUnchanged()
         {
@@ -395,7 +449,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             byte[] environ = Encoding.UTF8.GetBytes("PATH=/usr/bin\0HOME=/root\0");
             string result = PidIpcEndpoint.ParseTmpDir(environ);
-            Assert.Equal(Path.GetTempPath(), result);
+            Assert.Equal("/tmp/", result);
+        }
+
+        [Fact]
+        public void ParseTmpDir_EmptyTmpdir_ReturnsFallback()
+        {
+            byte[] environ = Encoding.UTF8.GetBytes("TMPDIR=\0");
+            string result = PidIpcEndpoint.ParseTmpDir(environ);
+            Assert.Equal("/tmp/", result);
         }
 
         [Fact]
@@ -403,7 +465,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             byte[] environ = new byte[0];
             string result = PidIpcEndpoint.ParseTmpDir(environ);
-            Assert.Equal(Path.GetTempPath(), result);
+            Assert.Equal("/tmp/", result);
         }
 
         #endregion

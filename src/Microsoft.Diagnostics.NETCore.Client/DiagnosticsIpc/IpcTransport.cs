@@ -252,6 +252,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private const string _procStatusPathFormat = "/proc/{0}/status";
         private const string _procEnvironPathFormat = "/proc/{0}/environ";
         private const string _procRootPathFormat = "/proc/{0}/root";
+        private const string _linuxDefaultTmpDir = "/tmp/";
         private static bool IsUnixPeerValidationSupported =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
@@ -468,6 +469,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     .OrderByDescending(GetCandidateLastWriteTime)
                     .ToArray();
             }
+            catch (ArgumentException ex)
+            {
+                Trace.TraceWarning($"Unable to resolve diagnostic socket for process {pid}: {ex.Message}");
+                return Array.Empty<string>();
+            }
             catch (IOException ex)
             {
                 Trace.TraceWarning($"Unable to resolve diagnostic socket for process {pid}: {ex.Message}");
@@ -592,7 +598,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         /// <summary>
         /// Gets the TMPDIR for a target process by reading /proc/{pid}/environ.
-        /// Falls back to the platform temp directory if TMPDIR is not set or environ cannot be read.
+        /// Falls back to the Linux runtime's default if TMPDIR is empty or not set,
+        /// or to the platform temp directory if environ cannot be read.
         /// This API is a best-effort helper - it can return the default value for processes that set
         /// TMPDIR if it's called too early during startup as the environment can change several times
         /// and there's no clear marker that such intermmediate states are over.
@@ -626,20 +633,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             environReadable = true;
 
-            if (environData.Length == 0)
-            {
-                // Empty environ can mean the process has no environment variables, or that we read
-                // between fork() and execve() before the kernel populates the environment.
-                return tmpDirPath;
-            }
-
             tmpDirPath = ParseTmpDir(environData);
             return tmpDirPath;
         }
 
         /// <summary>
         /// Parses a null-separated environ byte array to extract the TMPDIR value.
-        /// Returns the platform temp directory if TMPDIR is not found.
+        /// Returns the Linux runtime's default temp directory if TMPDIR is empty or not found.
         /// </summary>
         internal static string ParseTmpDir(byte[] environData)
         {
@@ -648,11 +648,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 if (envVar.StartsWith("TMPDIR=", StringComparison.Ordinal))
                 {
-                    return envVar.Substring(7);
+                    string tmpDir = envVar.Substring(7);
+                    return string.IsNullOrEmpty(tmpDir) ? _linuxDefaultTmpDir : tmpDir;
                 }
             }
 
-            return Path.GetTempPath();
+            return _linuxDefaultTmpDir;
         }
 
         /// <summary>
