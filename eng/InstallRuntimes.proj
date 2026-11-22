@@ -65,7 +65,10 @@
           AfterTargets="Build"
           DependsOnTargets="CleanupVersionManifest;InstallTestSdk;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
 
-  <Target Name="InstallTestSdk">
+  <!-- Cross-architecture legs use the host SDK installed by InstallBuildSdk.
+       Native legs install the target SDK for test-time SDK commands. -->
+  <Target Name="InstallTestSdk"
+          Condition="'$(HostArch)' == '$(TargetArch)'">
     <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="InstallSdk"
              Properties="InstallRoot=$(DotNetInstallRoot);SdkBuildIdentifier=$(MicrosoftNETSdkVersion);SdkArchitecture=$(TargetArch)" />
   </Target>
