@@ -438,8 +438,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             object ICommandValueFactory.CreateOption<T>(string name, string[] aliases) => new Option<T>(name, aliases);
 
-            [RequiresDynamicCode("Legacy non-generic command attributes require runtime generic instantiation.")]
-            [RequiresUnreferencedCode("Legacy non-generic command attributes require constructors that cannot be statically determined.")]
+            [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Legacy attributes report a clear error when runtime generic instantiation is unavailable.")]
+            [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Legacy attributes are supported only on JIT hosts where the constructed type is retained.")]
             object ICommandValueFactory.CreateArgument(Type type, string name)
             {
                 try
@@ -458,8 +458,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
-            [RequiresDynamicCode("Legacy non-generic command attributes require runtime generic instantiation.")]
-            [RequiresUnreferencedCode("Legacy non-generic command attributes require constructors that cannot be statically determined.")]
+            [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Legacy attributes report a clear error when runtime generic instantiation is unavailable.")]
+            [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Legacy attributes are supported only on JIT hosts where the constructed type is retained.")]
             object ICommandValueFactory.CreateOption(Type type, string name, string[] aliases)
             {
                 try

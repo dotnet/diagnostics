@@ -38,30 +38,26 @@ namespace System.Diagnostics.CodeAnalysis
         All = -1
     }
 
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Class, Inherited = false)]
-    internal sealed class RequiresDynamicCodeAttribute : Attribute
+    [AttributeUsage(AttributeTargets.All, Inherited = false, AllowMultiple = true)]
+    internal sealed class UnconditionalSuppressMessageAttribute : Attribute
     {
-        public RequiresDynamicCodeAttribute(string message)
+        public UnconditionalSuppressMessageAttribute(string category, string checkId)
         {
-            Message = message;
+            Category = category;
+            CheckId = checkId;
         }
 
-        public string Message { get; }
+        public string Category { get; }
 
-        public string Url { get; set; }
-    }
+        public string CheckId { get; }
 
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Class, Inherited = false)]
-    internal sealed class RequiresUnreferencedCodeAttribute : Attribute
-    {
-        public RequiresUnreferencedCodeAttribute(string message)
-        {
-            Message = message;
-        }
+        public string Scope { get; set; }
 
-        public string Message { get; }
+        public string Target { get; set; }
 
-        public string Url { get; set; }
+        public string MessageId { get; set; }
+
+        public string Justification { get; set; }
     }
 }
 #endif
