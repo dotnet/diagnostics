@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             CommandService = commandService;
         }
 
-        [Argument(Help = "Command to find help.")]
+        [Argument<string>(Help = "Command to find help.")]
         public string Command { get; set; }
 
         public ICommandService CommandService { get; }

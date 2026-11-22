@@ -22,19 +22,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             DumpHeap = dumpHeap;
         }
 
-        [Option(Name = "-detail", Help = "Will display extra information on any SyncBlocks that need to be cleaned up, and on any RuntimeCallableWrappers (RCWs) that await cleanup.  Both of these data structures are cached and cleaned up by the finalizer thread when it gets a chance to run.")]
+        [Option<bool>(Name = "-detail", Help = "Will display extra information on any SyncBlocks that need to be cleaned up, and on any RuntimeCallableWrappers (RCWs) that await cleanup.  Both of these data structures are cached and cleaned up by the finalizer thread when it gets a chance to run.")]
         public bool Detail { get; set; }
 
-        [Option(Name = "-allReady", Help = "Specifying this argument will allow for the display of all objects  that are ready for finalization, whether they are already marked by  the GC as such, or whether the next GC will.  The objects that are  not in the \"Ready for finalization\" list are finalizable objects that  are no longer rooted.  This option can be very expensive, as it  verifies whether all the objects in the finalizable queues are still  rooted or not.")]
+        [Option<bool>(Name = "-allReady", Help = "Specifying this argument will allow for the display of all objects  that are ready for finalization, whether they are already marked by  the GC as such, or whether the next GC will.  The objects that are  not in the \"Ready for finalization\" list are finalizable objects that  are no longer rooted.  This option can be very expensive, as it  verifies whether all the objects in the finalizable queues are still  rooted or not.")]
         public bool AllReady { get; set; }
 
-        [Option(Name = "-short", Help = "Limits the output to just the address of each object.  If used in conjunction with -allReady it enumerates all objects that have a finalizer that are no longer rooted.  If used independently it lists all objects in the finalizable and \"ready for finalization\" queues.")]
+        [Option<bool>(Name = "-short", Help = "Limits the output to just the address of each object.  If used in conjunction with -allReady it enumerates all objects that have a finalizer that are no longer rooted.  If used independently it lists all objects in the finalizable and \"ready for finalization\" queues.")]
         public bool Short { get; set; }
 
-        [Option(Name = "-mt", Help = "Limits the search for finalizable objects to only those matching the given MethodTable.")]
+        [Option<string>(Name = "-mt", Help = "Limits the search for finalizable objects to only those matching the given MethodTable.")]
         public string MethodTable { get; set; }
 
-        [Option(Name = "-stat", Aliases = new string[] { "-summary" }, Help = "Only print object statistics, not the list of all objects.")]
+        [Option<bool>(Name = "-stat", Aliases = new string[] { "-summary" }, Help = "Only print object statistics, not the list of all objects.")]
         public bool Stat { get; set; }
 
         public LiveObjectService LiveObjects { get; }

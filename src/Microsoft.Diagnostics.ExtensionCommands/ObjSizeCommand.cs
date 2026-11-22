@@ -20,19 +20,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public DumpHeapService DumpHeap { get; }
 
-        [Option(Name = "-short")]
+        [Option<bool>(Name = "-short")]
         public bool Short { get; set; }
 
-        [Option(Name = "-strings")]
+        [Option<bool>(Name = "-strings")]
         public bool Strings { get; set; }
 
-        [Option(Name = "-stat", Aliases = new string[] { "-summary" })]
+        [Option<bool>(Name = "-stat", Aliases = new string[] { "-summary" })]
         public bool Stat { get; set; }
 
-        [Argument]
+        [Argument<string>]
         public string ObjectAddress { get; set; }
 
-        [Option(Name = "-mt")]
+        [Option<string>(Name = "-mt")]
         public string MethodTable { get; set; }
 
         public override void Invoke()

@@ -63,6 +63,21 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
+        public void NonGenericCommandBindingsRemainSupported()
+        {
+            ServiceContainer services = CreateServices();
+            LegacyActivationState state = new();
+            services.AddService(state);
+            CommandService commands = new();
+            commands.AddCommands<LegacyAttributeCommand>();
+
+            commands.Execute("legacy value --count 7", services);
+
+            Assert.Equal("value", state.Value);
+            Assert.Equal(7, state.Count);
+        }
+
+        [Fact]
         public void MissingRequiredConstructorDependencyFails()
         {
             CommandService commands = new();
@@ -344,6 +359,36 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
         }
 
+        public sealed class LegacyActivationState
+        {
+            public string Value { get; set; }
+            public int Count { get; set; }
+        }
+
+        [Command(Name = "legacy")]
+        public sealed class LegacyAttributeCommand : CommandBase
+        {
+            private readonly LegacyActivationState _state;
+
+            public LegacyAttributeCommand(IServiceProvider services, LegacyActivationState state)
+                : base(services)
+            {
+                _state = state;
+            }
+
+            [Argument]
+            public string Value { get; set; }
+
+            [Option(Name = "--count")]
+            public int Count { get; set; }
+
+            public override void Invoke()
+            {
+                _state.Value = Value;
+                _state.Count = Count;
+            }
+        }
+
         [Command(Name = "activate", Help = "Constructor command", DefaultOptions = "--count 3")]
         public sealed class ActivatedCommand : CommandBase
         {
@@ -357,10 +402,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             public ActivationState State { get; }
             public OptionalDependency Optional { get; }
 
-            [Argument]
+            [Argument<string>]
             public string Value { get; set; }
 
-            [Option(Name = "--count")]
+            [Option<int>(Name = "--count")]
             public int Count { get; set; } = 1;
 
             public override void Invoke() => State.Invocations.Add(this);

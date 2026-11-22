@@ -269,7 +269,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// This groups like commands that may have the same name as another group or the default one.
         /// </summary>
-        private sealed class CommandGroup
+        private sealed class CommandGroup : ICommandValueFactory
         {
             private Command _rootCommand;
             private readonly Dictionary<string, CommandHandler> _commandHandlers = new();
@@ -397,9 +397,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         ArgumentArity arity = property.PropertyType.IsArray ? ArgumentArity.ZeroOrMore : ArgumentArity.ZeroOrOne;
 
-                        Argument argument = (Argument)typeof(Argument<>).MakeGenericType(property.PropertyType)
-                            .GetConstructor([typeof(string)])
-                            .Invoke([argumentAttribute.Name ?? property.Name.ToLowerInvariant()]);
+                        Argument argument = (Argument)argumentAttribute.Create(
+                            this,
+                            property.PropertyType,
+                            argumentAttribute.Name ?? property.Name.ToLowerInvariant());
 
                         argument.Description = argumentAttribute.Help;
                         argument.Arity = arity;
@@ -412,9 +413,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         OptionAttribute optionAttribute = (OptionAttribute)property.GetCustomAttributes(typeof(OptionAttribute), inherit: false).SingleOrDefault();
                         if (optionAttribute != null)
                         {
-                            Option option = (Option)typeof(Option<>).MakeGenericType(property.PropertyType)
-                                .GetConstructor([typeof(string), typeof(string[])])
-                                .Invoke([optionAttribute.Name ?? BuildOptionAlias(property.Name), optionAttribute.Aliases]);
+                            Option option = (Option)optionAttribute.Create(
+                                this,
+                                property.PropertyType,
+                                optionAttribute.Name ?? BuildOptionAlias(property.Name));
 
                             option.Description = optionAttribute.Help;
 
@@ -430,6 +432,57 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 _rootCommand.Subcommands.Add(command);
 
                 // Build or re-build parser instance after this command is added
+            }
+
+            object ICommandValueFactory.CreateArgument<T>(string name) => new Argument<T>(name);
+
+            object ICommandValueFactory.CreateOption<T>(string name, string[] aliases) => new Option<T>(name, aliases);
+
+            [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Legacy attributes report a clear error when runtime generic instantiation is unavailable.")]
+            [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Legacy attributes are supported only on JIT hosts where the constructed type is retained.")]
+            object ICommandValueFactory.CreateArgument(Type type, string name)
+            {
+                try
+                {
+                    Type argumentType = typeof(Argument<>).MakeGenericType(type);
+                    ConstructorInfo constructor = argumentType.GetConstructor([typeof(string)]);
+                    if (constructor is null)
+                    {
+                        throw CreateLegacyAttributeException(nameof(ArgumentAttribute), null);
+                    }
+                    return constructor.Invoke([name]);
+                }
+                catch (NotSupportedException ex)
+                {
+                    throw CreateLegacyAttributeException(nameof(ArgumentAttribute), ex);
+                }
+            }
+
+            [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Legacy attributes report a clear error when runtime generic instantiation is unavailable.")]
+            [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Legacy attributes are supported only on JIT hosts where the constructed type is retained.")]
+            object ICommandValueFactory.CreateOption(Type type, string name, string[] aliases)
+            {
+                try
+                {
+                    Type optionType = typeof(Option<>).MakeGenericType(type);
+                    ConstructorInfo constructor = optionType.GetConstructor([typeof(string), typeof(string[])]);
+                    if (constructor is null)
+                    {
+                        throw CreateLegacyAttributeException(nameof(OptionAttribute), null);
+                    }
+                    return constructor.Invoke([name, aliases]);
+                }
+                catch (NotSupportedException ex)
+                {
+                    throw CreateLegacyAttributeException(nameof(OptionAttribute), ex);
+                }
+            }
+
+            private static NotSupportedException CreateLegacyAttributeException(string attributeName, Exception innerException)
+            {
+                return new NotSupportedException(
+                    $"The non-generic {attributeName} requires dynamic code. Recompile the command using {attributeName}<T>.",
+                    innerException);
             }
 
             internal string GetDetailedHelp(Command command, IServiceProvider services, int windowWidth)

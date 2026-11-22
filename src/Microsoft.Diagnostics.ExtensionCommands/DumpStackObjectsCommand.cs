@@ -32,10 +32,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IThreadService ThreadService { get; }
 
-        [Option(Name = "-verify", Help = "Verify each object and only print ones that are valid objects.")]
+        [Option<bool>(Name = "-verify", Help = "Verify each object and only print ones that are valid objects.")]
         public bool Verify { get; set; }
 
-        [Argument(Name = "stackbounds", Help = "The top and bottom of the stack (in hex).")]
+        [Argument<string[]>(Name = "stackbounds", Help = "The top and bottom of the stack (in hex).")]
         public string[] Bounds { get; set; }
 
         public override void Invoke()

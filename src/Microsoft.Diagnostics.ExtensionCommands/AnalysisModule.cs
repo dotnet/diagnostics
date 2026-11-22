@@ -3,6 +3,7 @@
 
 using System;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.FileFormats;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -19,6 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             registry.AddServiceFactory<ClrMDHelper>(ServiceScope.Runtime, ClrMDHelper.TryCreate);
+            registry.AddProviderFactory<Action<LayoutManager>>(_ => RegisterLayouts);
             registry.AddService<DumpHeapService>(ServiceScope.Runtime);
             registry.AddService<GCHistory>(ServiceScope.Runtime);
             registry.AddService<ManagedFileLineService>(ServiceScope.Runtime);
@@ -27,6 +29,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             registry.AddService<StaticVariableService>(ServiceScope.Runtime);
             registry.AddService<RootCacheService>(ServiceScope.Runtime);
         }
+
+        private static void RegisterLayouts(LayoutManager layoutManager) =>
+            layoutManager
+                .RegisterArray<byte>()
+                .RegisterTStruct<SpecialDiagInfoHeader>()
+                .RegisterTStruct<ClrEngineMetrics>();
 
         public void RegisterCommands(ICommandService commandService)
         {

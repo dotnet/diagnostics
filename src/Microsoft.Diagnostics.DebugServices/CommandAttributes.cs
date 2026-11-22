@@ -6,6 +6,17 @@ using System.Diagnostics;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
+    public interface ICommandValueFactory
+    {
+        object CreateArgument(Type type, string name);
+
+        object CreateArgument<T>(string name);
+
+        object CreateOption(Type type, string name, string[] aliases);
+
+        object CreateOption<T>(string name, string[] aliases);
+    }
+
     /// <summary>
     /// Marks the class as a Command.
     /// </summary>
@@ -69,6 +80,27 @@ namespace Microsoft.Diagnostics.DebugServices
         /// The option's aliases i.e "-p"
         /// </summary>
         public string[] Aliases = Array.Empty<string>();
+
+        public virtual object Create(ICommandValueFactory factory, Type propertyType, string name)
+        {
+            return factory.CreateOption(propertyType, name, Aliases);
+        }
+    }
+
+    /// <summary>
+    /// Marks the property as an option with the specified value type.
+    /// </summary>
+    /// <typeparam name="T">The option value type.</typeparam>
+    public sealed class OptionAttribute<T> : OptionAttribute
+    {
+        public override object Create(ICommandValueFactory factory, Type propertyType, string name)
+        {
+            if (propertyType != typeof(T))
+            {
+                throw new ArgumentException($"Option type {typeof(T)} does not match property type {propertyType}");
+            }
+            return factory.CreateOption<T>(name, Aliases);
+        }
     }
 
     /// <summary>
@@ -86,6 +118,27 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Displayed in the help for the argument
         /// </summary>
         public string Help;
+
+        public virtual object Create(ICommandValueFactory factory, Type propertyType, string name)
+        {
+            return factory.CreateArgument(propertyType, name);
+        }
+    }
+
+    /// <summary>
+    /// Marks the property as an argument with the specified value type.
+    /// </summary>
+    /// <typeparam name="T">The argument value type.</typeparam>
+    public sealed class ArgumentAttribute<T> : ArgumentAttribute
+    {
+        public override object Create(ICommandValueFactory factory, Type propertyType, string name)
+        {
+            if (propertyType != typeof(T))
+            {
+                throw new ArgumentException($"Argument type {typeof(T)} does not match property type {propertyType}");
+            }
+            return factory.CreateArgument<T>(name);
+        }
     }
 
     /// <summary>

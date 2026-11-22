@@ -48,15 +48,11 @@ namespace SOS.Extensions
         private TargetFromDebuggerServices _targetFromDebuggerServices;
         private ContextServiceFromDebuggerServices _contextServiceFromDebuggerServices;
 
-        /// <summary>
-        /// Enable the assembly resolver to get the right versions in the same directory as this assembly.
-        /// </summary>
         static HostServices()
         {
-            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
-            {
-                AssemblyResolver.Enable();
-            }
+#if NETFRAMEWORK
+            AssemblyResolver.Enable();
+#endif
             DiagnosticLoggingService.Initialize();
         }
 

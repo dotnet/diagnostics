@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
         }
 
-        [Argument(Name = "arguments", Help = "module_name mdToken")]
+        [Argument<string[]>(Name = "arguments", Help = "module_name mdToken")]
         public string[] Arguments { get; set; }
 
         public override void Invoke()
