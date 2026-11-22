@@ -15,6 +15,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "threadpool", Aliases = new[] { "ThreadPool" }, Help = "Displays info about the runtime thread pool.")]
     public sealed class ThreadPoolCommand : ClrRuntimeCommandBase
     {
+        public ThreadPoolCommand(IServiceProvider services, DumpHeapService dumpHeap)
+            : base(services)
+        {
+            DumpHeap = dumpHeap;
+        }
+
         [Option(Name = "-ti", Help = "Print the hill climbing log.", Aliases = new string[] { "-hc" })]
         public bool PrintHillClimbingLog { get; set; }
 
@@ -24,8 +30,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-stat", Aliases = new[] { "-summary" }, Help = "Print a summary of queued work items grouped by type (DumpHeap -stat style).")]
         public bool PrintWorkItemStats { get; set; }
 
-        [ServiceImport]
-        public DumpHeapService DumpHeap { get; set; }
+        public DumpHeapService DumpHeap { get; }
 
         public override void Invoke()
         {

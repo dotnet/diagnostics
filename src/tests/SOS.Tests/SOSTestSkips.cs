@@ -9,11 +9,49 @@ namespace SOS.Tests;
 
 internal static class SOSTestSkips
 {
+    internal static void SkipFindRootsNotifications(TestConfig config)
+    {
+        Assert.SkipWhen(
+            config.Host == Host.Lldb && config.CoreVersion == CoreVersion.Net10,
+            "https://github.com/dotnet/runtime/pull/120083: .NET 10 GC notifications require target-memory allocation, " +
+            "which the LLDB host does not support. .NET 11 uses a preallocated notification bitmask.");
+    }
+
     internal static void SkipUnsupportedDictionary(TestConfig config)
     {
         Assert.SkipWhen(
             !OperatingSystem.IsWindows() && config.CoreVersion == CoreVersion.Net10,
             "https://github.com/dotnet/diagnostics/issues/5491: concurrent dictionary data is unavailable in .NET 10 Unix dumps.");
+    }
+
+    internal static void SkipDumpGcDataPerHeapStatistics(TestConfig config)
+    {
+        Assert.SkipWhen(
+            config.CoreVersion is CoreVersion.Net8 or CoreVersion.Net9,
+            "https://github.com/dotnet/runtime/pull/119393: the dumpgcdata per-heap statistics regression was fixed in .NET 10.");
+    }
+
+    internal static void SkipDumpLog(TestConfig config)
+    {
+        Assert.SkipWhen(
+            config.Flavor == Flavor.Framework && config.Liveness == Liveness.Dump,
+            "Desktop CLR DumpLog cannot read the stress-log header from a heap dump. " +
+            "See https://github.com/dotnet/diagnostics/issues/5757.");
+    }
+
+    internal static void SkipStackOverflowDump(TestConfig config)
+    {
+        if (config.Liveness != Liveness.Dump)
+            return;
+
+        Assert.SkipWhen(
+            config.Flavor == Flavor.SingleFile,
+            "SingleFile dumps do not expose the stack overflow exception information. " +
+            "See https://github.com/dotnet/diagnostics/issues/2515.");
+        Assert.SkipWhen(
+            config.Flavor == Flavor.Framework,
+            "Desktop CLR dumps do not expose the stack overflow exception through the thread data. " +
+            "See https://github.com/dotnet/diagnostics/issues/5757.");
     }
 
     internal static void SkipICorDebugStackWalk(TestConfig config)
@@ -45,27 +83,25 @@ internal static class SOSTestSkips
 
     /// <summary>
     /// Every ICorDebug stack walk decodes each frame's compressed debug info, so all of these tests share
-    /// the same .NET 10 Windows x86 DAC defect.
+    /// the same Windows x86 legacy DAC defect.
     /// </summary>
     internal static string? GetX86DebugInfoSkipReason(TestConfig config, bool isWindows, Architecture architecture)
     {
+        // https://github.com/dotnet/runtime/issues/136331
         // In coreclr's debuginfostore.cpp, EnumMemoryRegions pads debug info to NibbleChunkType (4 bytes
         // on x86), but DoBounds/ReadFromBitOffsets uses aligned 8-byte loads. The last load can extend
-        // up to 4 bytes past the enumerated range in Heap/Mini dumps and truncate an ICorDebug walk.
-        // Failure is intermittent: an affected blob must belong to a method on the walked stack.
-        // Full dumps, 64-bit targets (8-byte padding), and cDAC (bounded byte-wise reads) are unaffected.
-        // .NET 11 Heap enumeration incidentally covers the over-read; Mini dumps still expose it.
-        // Remove when a fixed DAC flows into the test runtimes; existing dumps need not be recaptured.
+        // up to 4 bytes past the enumerated range in reduced dumps and truncate an ICorDebug walk.
+        bool affectedRuntime = config.CoreVersion is CoreVersion.Net10 or CoreVersion.Net11;
         if (isWindows
             && architecture == Architecture.X86
             && config.Liveness == Liveness.Dump
             && config.DumpKind != DumpKind.Full
-            && config.CoreVersion == CoreVersion.Net10
+            && affectedRuntime
             && config.Flavor is Flavor.Core or Flavor.SingleFile
             && config.Dac == Dac.Legacy)
         {
-            return ".NET 10 Windows x86 ICorDebug stack walks truncate because the legacy DAC over-reads " +
-                "compressed debug info past the region enumerated into a reduced dump.";
+            return "https://github.com/dotnet/runtime/issues/136331: Windows x86 legacy DAC ICorDebug stack walks " +
+                "can truncate when compressed debug info extends past the region enumerated into a reduced dump.";
         }
 
         return null;

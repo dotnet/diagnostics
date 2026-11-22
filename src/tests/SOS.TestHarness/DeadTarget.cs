@@ -22,6 +22,7 @@ public sealed class DeadTarget : Target
     }
 
     public override string DumpPath => Current.DumpPath;
+    public override IReadOnlyList<string> HostStartupDiagnostics => Current.StartupDiagnostics;
 
     protected override void GoToStopPointCore(string stopName)
     {

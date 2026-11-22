@@ -3,12 +3,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
     public interface IServiceManager
     {
+        /// <summary>
+        /// Diagnostics modules whose services have been registered, in registration order.
+        /// </summary>
+        IReadOnlyList<IDiagnosticsModule> DiagnosticModules { get; }
+
         /// <summary>
         /// Creates a new service container factory with all the registered factories for the given scope.
         /// </summary>
@@ -20,13 +24,8 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Get the provider factories for a type or interface.
         /// </summary>
-        /// <param name="providerType">type or interface</param>
+        /// <typeparam name="TProvider">provider type or interface</typeparam>
         /// <returns>the provider factories for the type</returns>
-        IEnumerable<ServiceFactory> EnumerateProviderFactories(Type providerType);
-
-        /// <summary>
-        /// Returns the extensions loaded
-        /// </summary>
-        public IEnumerable<Assembly> ExtensionsLoaded { get; }
+        IEnumerable<Func<IServiceProvider, TProvider>> EnumerateProviderFactories<TProvider>() where TProvider : class;
     }
 }

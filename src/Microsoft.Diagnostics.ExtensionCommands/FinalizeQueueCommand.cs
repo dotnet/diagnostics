@@ -14,6 +14,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "finalizequeue", Aliases = new[] { "fq", "FinalizeQueue" }, Help = "Displays all objects registered for finalization.")]
     public class FinalizeQueueCommand : ClrRuntimeCommandBase
     {
+        public FinalizeQueueCommand(IServiceProvider services, LiveObjectService liveObjects, RootCacheService rootCache, DumpHeapService dumpHeap)
+            : base(services)
+        {
+            LiveObjects = liveObjects;
+            RootCache = rootCache;
+            DumpHeap = dumpHeap;
+        }
+
         [Option(Name = "-detail", Help = "Will display extra information on any SyncBlocks that need to be cleaned up, and on any RuntimeCallableWrappers (RCWs) that await cleanup.  Both of these data structures are cached and cleaned up by the finalizer thread when it gets a chance to run.")]
         public bool Detail { get; set; }
 
@@ -29,14 +37,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-stat", Aliases = new string[] { "-summary" }, Help = "Only print object statistics, not the list of all objects.")]
         public bool Stat { get; set; }
 
-        [ServiceImport]
-        public LiveObjectService LiveObjects { get; set; }
+        public LiveObjectService LiveObjects { get; }
 
-        [ServiceImport]
-        public RootCacheService RootCache { get; set; }
+        public RootCacheService RootCache { get; }
 
-        [ServiceImport]
-        public DumpHeapService DumpHeap { get; set; }
+        public DumpHeapService DumpHeap { get; }
 
         public override void Invoke()
         {

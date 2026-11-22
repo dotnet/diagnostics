@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <NativeLib>Shared</NativeLib>
+    <StripSymbols>true</StripSymbols>
+    <NativeSymbolExt>$(SymbolsSuffix)</NativeSymbolExt>
+    <DsymUtilOptions Condition="'$(TargetOS)' == 'osx'">$(DsymUtilOptions) --flat</DsymUtilOptions>
+    <ControlFlowGuard>Guard</ControlFlowGuard>
+    <UseNativeAotForComponents>true</UseNativeAotForComponents>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(TargetRid)</RuntimeIdentifier>
+  </PropertyGroup>
+</Project>

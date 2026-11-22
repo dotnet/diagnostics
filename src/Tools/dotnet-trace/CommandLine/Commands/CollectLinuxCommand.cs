@@ -361,11 +361,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string processName;
                 try
                 {
-                    processName = Process.GetProcessById(pid).ProcessName;
+                    using Process process = Process.GetProcessById(pid);
+                    processName = process.ProcessName;
                 }
-                catch (ArgumentException)
+                catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
                 {
-                    // Process exited between discovery and name resolution, no need to report these.
+                    // GetProcessById throws ArgumentException if the process has already exited.
+                    // ProcessName reads process information lazily and can throw InvalidOperationException
+                    // if the process exits after lookup but before that information is read.
                     continue;
                 }
 

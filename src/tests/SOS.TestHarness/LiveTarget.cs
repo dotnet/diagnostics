@@ -36,7 +36,8 @@ public sealed class LiveTarget : Target
     private bool _disposed;
 
     internal LiveTarget(Host hostKind, TargetDefinition definition, Flavor flavor, string exePath,
-                        CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy)
+                        CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,
+                        HostRuntime hostRuntime = HostRuntime.Managed, GcType gcType = GcType.Workstation)
         : base(hostKind, definition.Name, flavor)
     {
         _definition = definition;
@@ -49,7 +50,17 @@ public sealed class LiveTarget : Target
         _gateHeld = true;
         try
         {
-            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac);
+            Dictionary<string, string> environment = definition.EnvironmentVariables is null
+                ? new()
+                : new(definition.EnvironmentVariables);
+            if (gcType == GcType.Server)
+            {
+                environment["DOTNET_gcServer"] = "1";
+                environment["DOTNET_GCHeapCount"] = "4";
+                environment["DOTNET_GCDynamicAdaptationMode"] = "0";
+            }
+
+            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac, hostRuntime, environment);
         }
         catch
         {
@@ -117,6 +128,21 @@ public sealed class LiveTarget : Target
     }
 
     /// <summary>
+    /// Clear both SOS's pending managed breakpoints and any native breakpoints it already bound in the
+    /// underlying debugger.
+    /// </summary>
+    public void ClearBreakpoints()
+    {
+        Sos("bpmd -clearall");
+        Execute(Host switch
+        {
+            Host.Cdb => "bc *",
+            Host.Lldb => "breakpoint delete --force",
+            _ => throw new InvalidOperationException($"Unexpected live host '{Host}'."),
+        });
+    }
+
+    /// <summary>
     /// Live <c>bpmd</c> cannot bind in a self-contained single-file image under the lldb host: bpmd arms a
     /// JIT/prestub notification breakpoint on a CoreCLR routine, but in a self-contained single-file
     /// publish the runtime is statically linked into the (symbol-stripped) app image, so lldb has no
@@ -138,6 +164,9 @@ public sealed class LiveTarget : Target
     protected override SosOutput SosCore(string command) => Engine.Sos(command);
 
     protected override SosOutput ExecuteCore(string command) => Engine.Execute(command);
+
+    public override IReadOnlyList<string> HostStartupDiagnostics =>
+        (Engine as IStartupDiagnosticHost)?.StartupDiagnostics ?? [];
 
     internal override HostDiagnostics? CurrentDiagnostics => (_host as IDiagnosticHost)?.Diagnostics;
 

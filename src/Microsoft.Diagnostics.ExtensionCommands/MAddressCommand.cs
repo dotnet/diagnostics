@@ -14,6 +14,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "maddress", Help = "Displays a breakdown of the virtual address space.")]
     public sealed class MAddressCommand : CommandBase
     {
+        public MAddressCommand(IServiceProvider services, NativeAddressHelper addressHelper)
+            : base(services)
+        {
+            AddressHelper = addressHelper;
+        }
+
         private const string ImagesFlag = "-images";
         private const string SummaryFlag = "-summary";
         private const string ReserveFlag = "-reserve";
@@ -43,8 +49,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = ListFlag, Help = "A separated list of memory regions to list allocations for.")]
         public string List { get; set; }
 
-        [ServiceImport]
-        public NativeAddressHelper AddressHelper { get; set; }
+        public NativeAddressHelper AddressHelper { get; }
 
         public override void Invoke()
         {
@@ -197,7 +202,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         [FilterInvoke(Message = "The memory region service does not exists. This command is only supported under windbg/cdb debuggers.")]
-        public static bool FilterInvoke([ServiceImport(Optional = true)] NativeAddressHelper helper) => helper != null;
+        public static bool FilterInvoke(IServiceProvider services) => services.GetService<NativeAddressHelper>() != null;
 
         [HelpInvoke]
         public static string GetDetailedHelp() =>

@@ -16,8 +16,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumpexceptions", Help = "Displays a list of all managed exceptions.")]
     public class DumpExceptionsCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public LiveObjectService LiveObjects { get; set; } = null!;
+        public DumpExceptionsCommand(IServiceProvider services, LiveObjectService liveObjects)
+            : base(services)
+        {
+            LiveObjects = liveObjects;
+        }
+
+        public LiveObjectService LiveObjects { get; }
 
         [Option(Name = "-live")]
         public bool Live { get; set; }

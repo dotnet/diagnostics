@@ -218,6 +218,9 @@ HRESULT CreateCoreDbg(
         hr = CORDBG_E_DEBUG_COMPONENT_MISSING;
     }
 
+#ifndef HOST_UNIX
+    // On Unix the DBI isn't freed: its statically linked PAL registers a pthread TLS destructor
+    // that would be left pointing into the unloaded module.
     if (FAILED(hr))
     {
         if (hDbi != NULL)
@@ -225,6 +228,7 @@ HRESULT CreateCoreDbg(
             FreeLibrary(hDbi);
         }
     }
+#endif // HOST_UNIX
 
     return hr;
 }

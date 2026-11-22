@@ -1,7 +1,8 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace SOS.Hosting.DbgEng.Interop
@@ -18,6 +19,10 @@ namespace SOS.Hosting.DbgEng.Interop
             _iface = null;
         }
 
-        public object Interface => _iface != null ? Marshal.GetObjectForIUnknown((IntPtr)_iface) : null;
+        public object Interface
+        {
+            [RequiresDynamicCode("Built-in COM interop is not supported by NativeAOT.")]
+            get => _iface != null ? Marshal.GetObjectForIUnknown((IntPtr)_iface) : null;
+        }
     }
 }

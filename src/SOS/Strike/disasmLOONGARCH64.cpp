@@ -44,6 +44,11 @@ namespace LOONGARCH64GCDump
 #endif
 
 
+LPCSTR LOONGARCH64Machine::GetGCInfoRegisterName(unsigned int registerNumber) const
+{
+    return LOONGARCH64GCDump::GetRegName(registerNumber);
+}
+
 void LOONGARCH64Machine::IsReturnAddress(TADDR retAddr, TADDR* whereCalled) const
 {
     *whereCalled = 0;

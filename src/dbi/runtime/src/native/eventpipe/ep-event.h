@@ -1,0 +1,167 @@
+#ifndef __EVENTPIPE_EVENT_H__
+#define __EVENTPIPE_EVENT_H__
+
+#include "ep-rt-config.h"
+
+#ifdef ENABLE_PERFTRACING
+#include "ep-types.h"
+#include "ep-rt.h"
+
+#undef EP_IMPL_GETTER_SETTER
+#ifdef EP_IMPL_EVENT_GETTER_SETTER
+#define EP_IMPL_GETTER_SETTER
+#endif
+#include "ep-getter-setter.h"
+
+/*
+ * EventPipeEvent.
+ */
+
+struct _EventPipeEventDefinition {
+	uint64_t keywords;
+	uint32_t event_id;
+	uint8_t event_version;
+	uint8_t level;
+	bool need_stack;
+};
+
+// The definitions and initially zeroed event storage must outlive the provider.
+// Event storage must not be shared by live providers.
+struct _EventPipeEventTable {
+	const EventPipeEventDefinition *definitions;
+	EventPipeEvent *events;
+	uint32_t events_len;
+};
+
+#if defined(EP_INLINE_GETTER_SETTER) || defined(EP_IMPL_EVENT_GETTER_SETTER)
+struct _EventPipeEvent {
+#else
+struct _EventPipeEvent_Internal {
+#endif
+	// Bit vector containing the keywords that enable the event.
+	uint64_t keywords;
+	// The ith bit is 1 iff the event is enabled for the ith session.
+	volatile int64_t enabled_mask;
+	// The ith bit is 1 iff the event metadata has been written for the ith session.
+	// Currently, bits are only enabled in user_events sessions.
+	volatile int64_t metadata_written_mask;
+	// Metadata
+	uint8_t *metadata;
+	// The provider that contains the event.
+	EventPipeProvider *provider;
+	// The ID (within the provider) of the event.
+	uint32_t event_id;
+	// The version of the event.
+	uint32_t event_version;
+	// Metadata length;
+	uint32_t metadata_len;
+	// The verbosity of the event.
+	EventPipeEventLevel level;
+	// True if a call stack should be captured when writing the event.
+	bool need_stack;
+};
+
+#if !defined(EP_INLINE_GETTER_SETTER) && !defined(EP_IMPL_EVENT_GETTER_SETTER)
+struct _EventPipeEvent {
+	uint8_t _internal [sizeof (struct _EventPipeEvent_Internal)];
+};
+#endif
+
+EP_DEFINE_GETTER(EventPipeEvent *, event, uint64_t, keywords)
+EP_DEFINE_GETTER_REF(EventPipeEvent *, event, volatile int64_t *, enabled_mask)
+EP_DEFINE_GETTER_REF(EventPipeEvent *, event, volatile int64_t *, metadata_written_mask)
+EP_DEFINE_GETTER(EventPipeEvent *, event, uint8_t *, metadata)
+EP_DEFINE_GETTER(EventPipeEvent *, event, EventPipeProvider *, provider)
+EP_DEFINE_GETTER(EventPipeEvent *, event, uint32_t, event_id)
+EP_DEFINE_GETTER(EventPipeEvent *, event, uint32_t, event_version)
+EP_DEFINE_GETTER(EventPipeEvent *, event, uint32_t, metadata_len)
+EP_DEFINE_GETTER(EventPipeEvent *, event, EventPipeEventLevel, level)
+EP_DEFINE_GETTER(EventPipeEvent *, event, bool, need_stack)
+
+static
+inline
+int64_t
+ep_event_get_enabled_mask (const EventPipeEvent *ep_event)
+{
+	return ep_rt_volatile_load_int64_t (ep_event_get_enabled_mask_cref (ep_event));
+}
+
+static
+inline
+void
+ep_event_set_enabled_mask (
+	EventPipeEvent *ep_event,
+	int64_t enabled_mask)
+{
+	ep_rt_volatile_store_int64_t (ep_event_get_enabled_mask_ref (ep_event), enabled_mask);
+}
+
+static
+inline
+bool
+ep_event_is_enabled (const EventPipeEvent *ep_event)
+{
+	return ep_event_get_enabled_mask (ep_event) != 0;
+}
+
+static
+inline
+bool
+ep_event_is_enabled_by_mask (
+	const EventPipeEvent *ep_event,
+	uint64_t session_mask)
+{
+	if ((ep_event_get_enabled_mask (ep_event) & session_mask) == 0)
+		return false;
+	EP_ASSERT (ep_event_get_provider (ep_event) != NULL);
+	return ep_provider_is_enabled_by_mask (ep_event_get_provider (ep_event), session_mask);
+}
+
+EventPipeEvent *
+ep_event_init (
+	EventPipeEvent *ep_event,
+	EventPipeProvider *provider,
+	uint64_t keywords,
+	uint32_t event_id,
+	uint32_t event_version,
+	EventPipeEventLevel level,
+	bool need_stack,
+	const uint8_t *metadata,
+	uint32_t metadata_len);
+
+void
+ep_event_fini (EventPipeEvent *ep_event);
+
+EventPipeEvent *
+ep_event_alloc (
+	EventPipeProvider *provider,
+	uint64_t keywords,
+	uint32_t event_id,
+	uint32_t event_version,
+	EventPipeEventLevel level,
+	bool need_stack,
+	const uint8_t *metadata,
+	uint32_t metadata_len);
+
+void
+ep_event_free (EventPipeEvent * ep_event);
+
+static
+inline
+bool
+ep_event_was_metadata_written (
+	const EventPipeEvent *ep_event,
+	uint64_t session_mask)
+{
+	EP_ASSERT (ep_event != NULL);
+	return ((ep_rt_volatile_load_int64_t (ep_event_get_metadata_written_mask_cref (ep_event)) & session_mask) != 0);
+}
+
+bool
+ep_event_update_metadata_written_mask (
+	EventPipeEvent *ep_event,
+	uint64_t session_mask,
+	bool enable);
+
+#endif /* ENABLE_PERFTRACING */
+#endif /* __EVENTPIPE_EVENT_H__ */

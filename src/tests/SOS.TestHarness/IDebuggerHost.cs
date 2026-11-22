@@ -33,3 +33,8 @@ public interface IDebuggerHost : IDisposable
     /// </summary>
     SosOutput Sos(string command);
 }
+
+internal interface IStartupDiagnosticHost
+{
+    IReadOnlyList<string> StartupDiagnostics { get; }
+}

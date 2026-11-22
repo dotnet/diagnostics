@@ -33,34 +33,42 @@ namespace SOS.Extensions
         private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable>(_vtable);
 
         private readonly HostType _hostType;
-        private readonly HResult _symbolOptionsResult = HResult.S_OK;
 
         /// <summary>
-        /// A pointer to the underlying IDebugClient interface if the host is DbgEng.
+        /// The native symbol interface if the host is DbgEng.
         /// </summary>
-        public IDebugClient5 DebugClient { get; }
+        public DebugSymbolsWrapper DebugSymbols { get; }
+
+        public DebugAdvancedWrapper DebugAdvanced { get; }
 
         internal DebuggerServices(IntPtr punk, HostType hostType)
             : base(IID_IDebuggerServices, punk)
         {
             _hostType = hostType;
 
-            // This uses COM marshalling code, so we also check that the OSPlatform is Windows.
             if (hostType == HostType.DbgEng && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                object obj = Marshal.GetObjectForIUnknown(punk);
-                if (obj is IDebugClient5 client)
+                IntPtr symbols = QueryInterface(typeof(IDebugSymbols5).GUID);
+                if (symbols != IntPtr.Zero)
                 {
-                    DebugClient = client;
-                    if (client is IDebugSymbols5 symbols)
-                    {
-                        // NativeAOT emits debugger-friendly CodeView display names while retaining stable, reversible
-                        // COFF public names used by diagnostic tooling. Prefer the public names for SOS lookups.
-                        // See https://github.com/dotnet/runtime/pull/132735.
-                        _symbolOptionsResult = symbols.AddSymbolOptions(SYMOPT.PUBLICS_ONLY);
-                    }
+                    DebugSymbols = new DebugSymbolsWrapper(symbols);
+                }
+                IntPtr advanced = QueryInterface(typeof(IDebugAdvanced2).GUID);
+                if (advanced != IntPtr.Zero)
+                {
+                    DebugAdvanced = new DebugAdvancedWrapper(advanced);
                 }
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                DebugSymbols?.Dispose();
+                DebugAdvanced?.Dispose();
+            }
+            base.Dispose(disposing);
         }
 
         #region SOSHost.INativeDebugger
@@ -206,7 +214,7 @@ namespace SOS.Extensions
 
         public HResult GetModuleVersionInformation(int index, out VS_FIXEDFILEINFO fileInfo)
         {
-            int versionBufferSize = Marshal.SizeOf(typeof(VS_FIXEDFILEINFO));
+            int versionBufferSize = Marshal.SizeOf<VS_FIXEDFILEINFO>();
             byte[] versionBuffer = new byte[versionBufferSize];
             fileInfo = default;
 
@@ -338,13 +346,6 @@ namespace SOS.Extensions
 
         public HResult GetSymbolByOffset(int moduleIndex, ulong address, out string symbol, out ulong displacement)
         {
-            if (!_symbolOptionsResult.IsOK)
-            {
-                symbol = null;
-                displacement = 0;
-                return _symbolOptionsResult;
-            }
-
             symbol = null;
 
             // Get the symbol length first
@@ -378,6 +379,16 @@ namespace SOS.Extensions
                 }
             }
             return hr;
+        }
+
+        internal interface IDebugAdvancedOperations
+        {
+            HResult GetSymbolInformation(DEBUG_SYMINFO which, ulong arg64, uint arg32, byte[] buffer, out int infoSize);
+        }
+
+        internal interface IDebugSymbolsOperations
+        {
+            HResult GetNameByOffsetWide(ulong offset, out ulong displacement);
         }
 
         public HResult GetOffsetBySymbol(int moduleIndex, string symbol, out ulong address)

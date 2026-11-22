@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Help;
 using System.CommandLine.Parsing;
 using System.Linq;
 using System.Threading;
@@ -236,6 +237,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ListCommand(),
                 ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that can be monitored.")
             };
+            rootCommand.Action = new HelpAction();
 
             ParseResult parseResult = rootCommand.Parse(args);
             string parsedCommandName = parseResult.CommandResult.Command.Name;

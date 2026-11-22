@@ -37,6 +37,11 @@ public sealed class PrintExceptionTests
             Liveness.AllValid,
             DumpKind.All);
 
+    public static TheoryData<TestConfig> OverflowMatrix { get; } =
+        TestMatrices.StackWalk(
+            [TargetCatalog.Overflow],
+            liveness: Liveness.AllValid);
+
     [SosTheory]
     [MemberData(nameof(NestedMatrix))]
     public async Task PrintException_Structure(TestConfig config)
@@ -115,6 +120,7 @@ public sealed class PrintExceptionTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         (string exceptionType, string message, uint hresult, string[] functions, string[] sourceLines) = config.Target switch
         {
@@ -162,11 +168,40 @@ public sealed class PrintExceptionTests
     }
 
     [SosTheory]
+    [MemberData(nameof(OverflowMatrix))]
+    public async Task PrintException_StackOverflow(TestConfig config)
+    {
+        SOSTestSkips.SkipStackOverflowDump(config);
+
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
+
+        target.Sos("clrthreads -managedexception");
+        SosOutput exception = target.Sos("printexception");
+
+        // DbgEng only provides a first-chance STATUS_STACK_OVERFLOW stop before the CLR records the
+        // last-thrown managed exception; continuing exits the process without a usable second-chance stop.
+        if (config.Liveness == Liveness.Live && OperatingSystem.IsWindows())
+        {
+            exception.AssertContains("There is no current managed exception on this thread");
+            return;
+        }
+
+        exception["Exception object"].AssertValid(Sos.Addr);
+        Assert.Equal("System.StackOverflowException", exception["Exception type"]);
+        Assert.Equal("<none>", exception["Message"]);
+        Assert.Equal("<none>", exception["InnerException"]);
+        exception.AssertContains("StackTrace (generated):");
+    }
+
+    [SosTheory]
     [MemberData(nameof(ReflectionMatrix))]
     public async Task PrintException_ReflectionInnerException(TestConfig config)
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         SosOutput pe = target.Sos("printexception");
         Assert.Equal("System.Reflection.TargetInvocationException", pe["Exception type"]);
@@ -196,6 +231,7 @@ public sealed class PrintExceptionTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         SosOutput aggregate = target.Sos("printexception");
         Assert.Equal("System.AggregateException", aggregate["Exception type"]);

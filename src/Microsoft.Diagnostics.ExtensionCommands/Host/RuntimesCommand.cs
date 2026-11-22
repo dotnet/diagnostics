@@ -12,17 +12,31 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "runtimes", Aliases = new string[] { "setruntime" }, Help = "Lists the runtimes in the target or changes the default runtime.")]
     public class RuntimesCommand : CommandBase
     {
-        [ServiceImport]
-        public IRuntimeService RuntimeService { get; set; }
+        public RuntimesCommand(
+            IServiceProvider services,
+            IRuntimeService runtimeService,
+            IContextService contextService,
+            ISettingsService settingsService,
+            ITarget target,
+            IModuleService moduleService)
+            : base(services)
+        {
+            RuntimeService = runtimeService;
+            ContextService = contextService;
+            SettingsService = settingsService;
+            Target = target;
+            ModuleService = moduleService;
+        }
 
-        [ServiceImport]
-        public IContextService ContextService { get; set; }
+        public IRuntimeService RuntimeService { get; }
 
-        [ServiceImport]
-        public ISettingsService SettingsService { get; set; }
+        public IContextService ContextService { get; }
 
-        [ServiceImport]
-        public ITarget Target { get; set; }
+        public ISettingsService SettingsService { get; }
+
+        public ITarget Target { get; }
+
+        public IModuleService ModuleService { get; }
 
         [Argument(Help = "Switch to the runtime by id.")]
         public int? Id { get; set; }
@@ -36,6 +50,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Forces all runtimes to be enumerated.")]
         public bool All { get; set; }
 
+        [Option(Name = "--module", Help = "Tries the named module first, stopping on a match unless --all is specified.")]
+        public string ModuleName { get; set; }
+
+        [Option(Name = "--address", Help = "Tries the module at the hexadecimal base address first, stopping on a match unless --all is specified.")]
+        public string ModuleAddress { get; set; }
+
+        [Option(Name = "--clear-priority", Help = "Clears the preferred runtime module.")]
+        public bool ClearPriority { get; set; }
+
         [Option(Name = "--usecdac", Help = "Controls cDAC usage: true (required), false (disabled), prefer (allow DAC fallback).")]
         public string UseCDac { get; set; }
 
@@ -47,6 +70,38 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (NetFx && NetCore)
             {
                 throw new DiagnosticsException("Cannot specify both -netfx and -netcore options");
+            }
+
+            if ((ModuleName is not null ? 1 : 0) + (ModuleAddress is not null ? 1 : 0) + (ClearPriority ? 1 : 0) > 1)
+            {
+                throw new DiagnosticsException("Specify only one of --module, --address, or --clear-priority");
+            }
+
+            ulong? preferredModule = RuntimeService.PreferredRuntimeModule;
+            if (ModuleName is not null)
+            {
+                IModule[] matches = ModuleService.GetModuleFromModuleName(ModuleName).ToArray();
+                if (matches.Length == 0)
+                {
+                    throw new DiagnosticsException($"Module '{ModuleName}' was not found");
+                }
+                if (matches.Length > 1)
+                {
+                    throw new DiagnosticsException($"Module '{ModuleName}' is ambiguous. Use --address to specify a module base address.");
+                }
+                preferredModule = matches[0].ImageBase;
+            }
+            else if (ModuleAddress is not null)
+            {
+                if (!TryParseAddress(ModuleAddress, out ulong address))
+                {
+                    throw new DiagnosticsException($"Invalid module base address '{ModuleAddress}'");
+                }
+                preferredModule = ModuleService.GetModuleFromBaseAddress(address).ImageBase;
+            }
+            else if (ClearPriority)
+            {
+                preferredModule = null;
             }
 
             bool flush = false;
@@ -73,6 +128,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 // Force all runtimes to be enumerated. This requires a target flush.
                 flags = RuntimeEnumerationFlags.All;
+                flush = true;
+            }
+
+            if (preferredModule != RuntimeService.PreferredRuntimeModule)
+            {
+                RuntimeService.PreferredRuntimeModule = preferredModule;
                 flush = true;
             }
 
@@ -124,6 +185,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     this.DisplayResources(runtime.RuntimeModule, all: false, indent: "    ");
                     this.DisplayRuntimeExports(runtime.RuntimeModule, error: true, indent: "    ");
+                }
+                if (RuntimeService.PreferredRuntimeModule is ulong preferredBase)
+                {
+                    WriteLine($"Preferred runtime module: {preferredBase:X16}");
                 }
                 this.DisplaySettingService();
             }

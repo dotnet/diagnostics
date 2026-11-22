@@ -13,12 +13,11 @@ namespace Microsoft.FileFormats.ELF
         public static LayoutManager AddELFTypes(this LayoutManager layouts, bool isBigEndian, bool is64Bit)
         {
             return layouts
-                     .AddPrimitives(isBigEndian)
-                     .AddEnumTypes()
-                     .AddSizeT(is64Bit ? 8 : 4)
-                     .AddPointerTypes()
-                     .AddNullTerminatedString()
-                     .AddTStructTypes(is64Bit ? new string[] { "64BIT" } : new string[] { "32BIT" });
+                .AddPrimitives(isBigEndian)
+                .AddEnumTypes()
+                .AddSizeT(is64Bit ? 8 : 4)
+                .AddNullTerminatedString()
+                .RegisterELF(is64Bit ? new[] { "64BIT" } : new[] { "32BIT" });
         }
     }
 
