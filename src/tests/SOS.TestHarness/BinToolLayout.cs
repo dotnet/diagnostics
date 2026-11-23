@@ -12,7 +12,6 @@ internal sealed class BinToolLayout : IToolLayout
     private readonly Lazy<ToolCommand> _dotNetDump = new(ResolveDotNetDump);
     private readonly Lazy<string?> _cdacOverrideDirectory = new(ResolveCDacOverrideDirectory);
     public string SosDirectory => RepoLayout.ArtifactsBinNative;
-    public string SosAssemblyPath => typeof(SOS.Extensions.HostServices).Assembly.Location;
     public ToolCommand DotNetDump => _dotNetDump.Value;
     public string DumpCacheDirectory => Path.Combine(RepoLayout.Scratch, "dumps");
     public string? CDacOverrideDirectory => _cdacOverrideDirectory.Value;

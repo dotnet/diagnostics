@@ -111,7 +111,6 @@ public sealed class PackagedToolSetup : ITestPipelineStartup
                 ?? throw new InvalidDataException("The shipped SOS installer did not provide a native source path.");
             string packageRoot = Path.GetDirectoryName(helpers[0])!;
             nativeSource.SetValue(installer, Path.Combine(packageRoot, Path.GetFileName(defaultSource)));
-            RequireProperty(type, "SOSManagedSourcePath").SetValue(installer, Path.Combine(packageRoot, "lib"));
             RequireProperty(type, "InstallLocation").SetValue(installer, sos);
             RequireProperty(type, "LLDBInitFile").SetValue(installer, null);
             MethodInfo install = type.GetMethod("Install")
@@ -125,7 +124,9 @@ public sealed class PackagedToolSetup : ITestPipelineStartup
 
         string nativeName = OperatingSystem.IsWindows() ? "sos.dll" :
             OperatingSystem.IsMacOS() ? "libsosplugin.dylib" : "libsosplugin.so";
-        foreach (string file in new[] { Path.Combine(sos, nativeName), Path.Combine(sos, "net8.0", "SOS.Extensions.dll") })
+        string extensionsName = OperatingSystem.IsWindows() ? "SOS.Extensions.NativeAot.dll" :
+            OperatingSystem.IsMacOS() ? "SOS.Extensions.NativeAot.dylib" : "SOS.Extensions.NativeAot.so";
+        foreach (string file in new[] { Path.Combine(sos, nativeName), Path.Combine(sos, extensionsName) })
         {
             if (!File.Exists(file))
             {

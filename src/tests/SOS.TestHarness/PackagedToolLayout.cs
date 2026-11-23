@@ -10,7 +10,6 @@ internal sealed class PackagedToolLayout : IToolLayout
 
     private string Root { get; }
     public string SosDirectory => Path.Combine(Root, "sos");
-    public string SosAssemblyPath => Path.Combine(SosDirectory, "net8.0", "SOS.Extensions.dll");
     public ToolCommand DotNetDump { get; }
     public string DumpCacheDirectory => Path.Combine(Root, "test-artifacts", "dumps");
     public string? CDacOverrideDirectory => _cdacOverrideDirectory.Value;
@@ -20,8 +19,10 @@ internal sealed class PackagedToolLayout : IToolLayout
         Root = Path.GetFullPath(root);
         string nativeSosName = OperatingSystem.IsWindows() ? "sos.dll" :
             OperatingSystem.IsMacOS() ? "libsosplugin.dylib" : "libsosplugin.so";
+        string nativeAotExtensionsName = OperatingSystem.IsWindows() ? "SOS.Extensions.NativeAot.dll" :
+            OperatingSystem.IsMacOS() ? "SOS.Extensions.NativeAot.dylib" : "SOS.Extensions.NativeAot.so";
         ToolLayout.RequireFile(Path.Combine(SosDirectory, nativeSosName));
-        ToolLayout.RequireFile(SosAssemblyPath);
+        ToolLayout.RequireFile(Path.Combine(SosDirectory, nativeAotExtensionsName));
         DotNetDump = new(ToolLayout.RequireFile(Path.Combine(Root, "tools", "dotnet-dump" + RepoLayout.ExeSuffix)));
     }
 
