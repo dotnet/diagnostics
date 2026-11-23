@@ -140,6 +140,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 File.WriteAllText(runtimePath, "");
                 Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out address));
                 Assert.Equal(runtimePath, address);
+
+                DateTime timestamp = DateTime.UtcNow;
+                File.SetLastWriteTimeUtc(runtimePath, timestamp);
+                File.SetLastWriteTimeUtc(routerPath, timestamp);
+                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out address));
+                Assert.Equal(routerPath, address);
             }
             finally
             {
@@ -180,9 +186,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
             string spoofPath = Path.Combine(
                 PidIpcEndpoint.IpcRootPath,
                 $"{prefix}-{Environment.ProcessId}-99999999-socket");
-            File.CreateSymbolicLink(spoofPath, otherProcessAddress);
+            string validRouterPath = useRouterName
+                ? Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-99999995-socket")
+                : null;
             try
             {
+                if (validRouterPath is not null)
+                {
+                    File.CreateSymbolicLink(validRouterPath, PidIpcEndpoint.GetDefaultAddress(Environment.ProcessId));
+                    Thread.Sleep(1100);
+                }
+                File.CreateSymbolicLink(spoofPath, otherProcessAddress);
+
                 Assert.True(PidIpcEndpoint.TryResolveAddress(
                     PidIpcEndpoint.IpcRootPath,
                     Environment.ProcessId,
@@ -197,6 +212,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             finally
             {
                 File.Delete(spoofPath);
+                if (validRouterPath is not null)
+                {
+                    File.Delete(validRouterPath);
+                }
             }
         }
 
@@ -209,10 +228,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
             string invalidPath = Path.Combine(
                 PidIpcEndpoint.IpcRootPath,
                 $"{prefix}-{Environment.ProcessId}-99999998-socket");
-            File.WriteAllText(invalidPath, "");
-
+            string validRouterPath = useRouterName
+                ? Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-99999995-socket")
+                : null;
             try
             {
+                if (validRouterPath is not null)
+                {
+                    File.CreateSymbolicLink(validRouterPath, PidIpcEndpoint.GetDefaultAddress(Environment.ProcessId));
+                }
+                File.WriteAllText(invalidPath, "");
+                File.SetLastWriteTimeUtc(invalidPath, DateTime.UtcNow.AddMinutes(1));
+
                 Assert.True(PidIpcEndpoint.TryResolveAddress(
                     PidIpcEndpoint.IpcRootPath,
                     Environment.ProcessId,
@@ -226,6 +253,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             finally
             {
                 File.Delete(invalidPath);
+                if (validRouterPath is not null)
+                {
+                    File.Delete(validRouterPath);
+                }
             }
         }
 
@@ -253,6 +284,42 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 File.Delete(overlongPath);
             }
+        }
+
+        [ConditionalTheory(nameof(IsUnix))]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Connect_PreferredRouterUnavailable_DoesNotFallBackToRuntime(bool useAsync)
+        {
+            DiagnosticsClientApiShim client = new(new DiagnosticsClient(Environment.ProcessId), useAsync);
+            ProcessInfo baseline = await client.GetProcessInfo(TimeSpan.FromSeconds(5));
+            Assert.Equal((ulong)Environment.ProcessId, baseline.ProcessId);
+
+            string routerPath = Path.Combine(
+                PidIpcEndpoint.IpcRootPath,
+                $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-99999996-socket");
+            File.WriteAllText(routerPath, "");
+            try
+            {
+                File.SetLastWriteTimeUtc(routerPath, DateTime.UtcNow.AddMinutes(1));
+                Assert.True(PidIpcEndpoint.TryResolveAddress(
+                    PidIpcEndpoint.IpcRootPath,
+                    Environment.ProcessId,
+                    out string selectedAddress));
+                Assert.Equal(routerPath, selectedAddress);
+
+                await Assert.ThrowsAsync<ServerNotAvailableException>(async () => {
+                    ProcessInfo info = await client.GetProcessInfo(TimeSpan.FromSeconds(5));
+                    _output.WriteLine($"Unavailable router endpoint returned runtime ProcessInfo for PID {info.ProcessId}.");
+                });
+            }
+            finally
+            {
+                File.Delete(routerPath);
+            }
+
+            ProcessInfo recovered = await client.GetProcessInfo(TimeSpan.FromSeconds(5));
+            Assert.Equal((ulong)Environment.ProcessId, recovered.ProcessId);
         }
 
         [ConditionalFact(nameof(IsUnix))]

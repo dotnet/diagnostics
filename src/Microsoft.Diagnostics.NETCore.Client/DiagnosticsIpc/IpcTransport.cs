@@ -265,7 +265,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? string.Format(_procRootPathFormat, pid) : null;
 
         private int _pid;
-        private IpcEndpointConfig _config;
         /// <summary>
         /// Creates a reference to a .NET process's IPC Transport
         /// using the default rules for a given pid
@@ -282,16 +281,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (!IsUnixPeerValidationSupported)
             {
                 string address = GetDefaultAddress(_pid);
-                _config = IpcEndpointConfig.Parse(address + ",connect");
-                return IpcEndpointHelper.Connect(_config, timeout);
+                IpcEndpointConfig config = IpcEndpointConfig.Parse(address + ",connect");
+                return IpcEndpointHelper.Connect(config, timeout);
             }
 
-            string[] addresses = GetDefaultAddresses(_pid);
+            IpcEndpointConfig[] configurations = GetDefaultConfigurations(_pid);
             Stopwatch stopwatch = Stopwatch.StartNew();
             Exception lastError = null;
             bool isFirstCandidate = true;
 
-            foreach (string address in addresses)
+            foreach (IpcEndpointConfig config in configurations)
             {
                 TimeSpan remainingTimeout = timeout;
                 if (!isFirstCandidate && timeout != Timeout.InfiniteTimeSpan)
@@ -304,31 +303,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
                 isFirstCandidate = false;
 
-                Stream stream = null;
                 try
                 {
-                    _config = new IpcEndpointConfig(
-                        address,
-                        IpcEndpointConfig.TransportType.UnixDomainSocket,
-                        IpcEndpointConfig.PortType.Connect);
-                    stream = IpcEndpointHelper.Connect(_config, remainingTimeout);
-                    if (ValidateConnectedPeer(stream))
-                    {
-                        Stream connectedStream = stream;
-                        stream = null;
-                        return connectedStream;
-                    }
-
-                    lastError = new ServerNotAvailableException(
-                        $"Diagnostic endpoint '{address}' does not belong to process {_pid}.");
+                    Stream stream = IpcEndpointHelper.Connect(config, remainingTimeout);
+                    return ValidateConnectedStream(stream, config.Address);
                 }
                 catch (Exception ex) when (IsCandidateConnectionException(ex))
                 {
                     lastError = ex;
-                }
-                finally
-                {
-                    stream?.Dispose();
                 }
             }
 
@@ -345,43 +327,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (!IsUnixPeerValidationSupported)
             {
                 string address = GetDefaultAddress(_pid);
-                _config = IpcEndpointConfig.Parse(address + ",connect");
-                return await IpcEndpointHelper.ConnectAsync(_config, token).ConfigureAwait(false);
+                IpcEndpointConfig config = IpcEndpointConfig.Parse(address + ",connect");
+                return await IpcEndpointHelper.ConnectAsync(config, token).ConfigureAwait(false);
             }
 
-            string[] addresses = GetDefaultAddresses(_pid);
+            IpcEndpointConfig[] configurations = GetDefaultConfigurations(_pid);
             Exception lastError = null;
 
-            foreach (string address in addresses)
+            foreach (IpcEndpointConfig config in configurations)
             {
                 token.ThrowIfCancellationRequested();
 
-                Stream stream = null;
                 try
                 {
-                    _config = new IpcEndpointConfig(
-                        address,
-                        IpcEndpointConfig.TransportType.UnixDomainSocket,
-                        IpcEndpointConfig.PortType.Connect);
-                    stream = await IpcEndpointHelper.ConnectAsync(_config, token).ConfigureAwait(false);
-                    if (ValidateConnectedPeer(stream))
-                    {
-                        Stream connectedStream = stream;
-                        stream = null;
-                        return connectedStream;
-                    }
-
-                    lastError = new ServerNotAvailableException(
-                        $"Diagnostic endpoint '{address}' does not belong to process {_pid}.");
+                    Stream stream = await IpcEndpointHelper.ConnectAsync(config, token).ConfigureAwait(false);
+                    return ValidateConnectedStream(stream, config.Address);
                 }
                 catch (Exception ex) when (IsCandidateConnectionException(ex))
                 {
                     token.ThrowIfCancellationRequested();
                     lastError = ex;
-                }
-                finally
-                {
-                    stream?.Dispose();
                 }
             }
 
@@ -399,10 +364,38 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using Stream _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
-        private bool ValidateConnectedPeer(Stream stream)
+        private static IpcEndpointConfig[] GetDefaultConfigurations(int pid)
         {
-            return stream is ExposedSocketNetworkStream socketStream &&
-                UnixSocketPeer.IsConnectedToProcess(socketStream.Socket, _pid);
+            return GetDefaultAddresses(pid)
+                .Select(address => new IpcEndpointConfig(
+                    address,
+                    IpcEndpointConfig.TransportType.UnixDomainSocket,
+                    IpcEndpointConfig.PortType.Connect))
+                .ToArray();
+        }
+
+        private Stream ValidateConnectedStream(Stream stream, string address)
+        {
+            bool isValid = false;
+            try
+            {
+                isValid = stream is ExposedSocketNetworkStream socketStream &&
+                    UnixSocketPeer.IsConnectedToProcess(socketStream.Socket, _pid);
+                if (!isValid)
+                {
+                    throw new ServerNotAvailableException(
+                        $"Diagnostic endpoint '{address}' does not belong to process {_pid}.");
+                }
+            }
+            finally
+            {
+                if (!isValid)
+                {
+                    stream.Dispose();
+                }
+            }
+
+            return stream;
         }
 
         private static bool IsCandidateConnectionException(Exception ex)
@@ -448,7 +441,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 string[] runtimeAddresses = Directory.GetFiles(searchDirectory, string.Format(_defaultAddressFormatNonWindows, pid, "*"))
                     .Where(f => IsValidAddressCandidate(f, pid, isRouter: false))
-                    .OrderByDescending(GetCandidateLastWriteTime)
                     .ToArray();
 
                 if (runtimeAddresses.Length == 0)
@@ -458,15 +450,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 string[] dsrouterAddresses = Directory.GetFiles(searchDirectory, string.Format(_dsrouterAddressFormatNonWindows, pid, "*"))
                     .Where(f => IsValidAddressCandidate(f, pid, isRouter: true))
+                    .ToArray();
+
+                // Putting router candidates first preserves their preference for equal timestamps.
+                string[] addresses = dsrouterAddresses
+                    .Concat(runtimeAddresses)
                     .OrderByDescending(GetCandidateLastWriteTime)
                     .ToArray();
 
-                // A candidate can be stale or spoofed. Return all candidates so connect can
-                // authenticate each peer and fall back without letting one bad path block attach.
-                // Prefer router sockets when timestamps are equal, matching the prior selection behavior.
-                return dsrouterAddresses
-                    .Concat(runtimeAddresses)
-                    .OrderByDescending(GetCandidateLastWriteTime)
+                // Router and runtime endpoints can share a peer PID but serve different targets.
+                bool isRouter = IsValidAddressCandidate(addresses[0], pid, isRouter: true);
+                return addresses
+                    .Where(f => IsValidAddressCandidate(f, pid, isRouter))
                     .ToArray();
             }
             catch (ArgumentException ex)

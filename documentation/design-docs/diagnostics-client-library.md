@@ -21,11 +21,14 @@ The goal of this library is as following:
 
 On Linux and macOS, PID-based endpoint resolution validates the connected
 Unix domain socket's peer PID through the kernel before sending diagnostic
-protocol data. If a runtime or diagnostic-router candidate does not belong to
-the requested process, the client closes it and tries the next candidate in
-timestamp order. This prevents the client from sending diagnostic commands to
-an unrelated process while preserving the existing diagnostic-router
-preference.
+protocol data. The newest candidate selects either the runtime or
+diagnostic-router endpoint kind, with router candidates preferred for equal
+timestamps. If a candidate is unavailable or does not belong to the requested
+process, the client tries the next candidate of the same kind in timestamp
+order. It does not fall back between endpoint kinds: a router's forwarding
+socket and its own runtime diagnostics socket can share a peer PID while
+serving different targets. If no candidate of the selected kind succeeds,
+the connection fails.
 
 Linux uses `SO_PEERCRED`, whose numeric option value differs on PowerPC, and
 macOS uses `LOCAL_PEERPID`. The peer-PID validation works for both 32-bit and
