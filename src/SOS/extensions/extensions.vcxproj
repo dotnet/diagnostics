@@ -308,8 +308,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="extensions.cpp" />
-    <ClCompile Include="hostcoreclr.cpp" />
-    <ClCompile Include="hostdesktop.cpp" />
+    <ClCompile Include="hostnativeaot.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="extensions.h" />
