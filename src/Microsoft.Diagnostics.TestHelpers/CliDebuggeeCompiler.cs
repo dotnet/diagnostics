@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -20,7 +21,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// </summary>
         public CliDebuggeeCompiler(TestConfiguration config, string debuggeeName) : base(config, debuggeeName) { }
 
-        private static Dictionary<string, string> GetBuildProperties(TestConfiguration config, string runtimeIdentifier)
+        private static Dictionary<string, string> GetBuildProperties(TestConfiguration config, string runtimeIdentifier, string dotNetPath)
         {
             Dictionary<string, string> buildProperties = new();
             string buildProjectMicrosoftNetCoreAppVersion = config.BuildProjectMicrosoftNetCoreAppVersion;
@@ -38,6 +39,20 @@ namespace Microsoft.Diagnostics.TestHelpers
                 Debug.Assert(runtimeIdentifier != null);
                 buildProperties.Add("PublishSingleFile", "true");
                 buildProperties.Add("SelfContained", "true");
+                if (!string.IsNullOrEmpty(config.RuntimeFrameworkVersion))
+                {
+                    buildProperties.TryAdd("RuntimeFrameworkVersion", config.RuntimeFrameworkVersion);
+                }
+                if (!string.IsNullOrEmpty(config.RuntimeFrameworkVersion) &&
+                    config.RuntimeFrameworkVersion == config.GetValue("RuntimeVersionLatest") &&
+                    !string.Equals(config.GetValue("PrivateBuildTesting"), "true", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(config.GetValue("InternalReleaseTesting"), "true", StringComparison.OrdinalIgnoreCase))
+                {
+                    string hostPackRoot = TestConfiguration.MakeCanonicalPath(config.GetValue("SingleFileHostPackRoot"))
+                        ?? Path.Combine(Path.GetDirectoryName(dotNetPath), "packs");
+                    buildProperties.Add("NetCoreTargetingPackRoot", hostPackRoot);
+                    buildProperties.Add("EnableAppHostPackDownload", "false");
+                }
             }
             string debugType = config.DebugType;
             // The default PDB type is portable
@@ -74,7 +89,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                                                initialSourceDirPath,
                                                config.DebuggeeMsbuildAuxRoot,
                                                GetDebuggeeNativeLibDirPath(config, debuggeeName),
-                                               GetBuildProperties(config, runtimeIdentifier),
+                                               GetBuildProperties(config, runtimeIdentifier, dotNetPath),
                                                runtimeIdentifier,
                                                config.BuildProjectFramework,
                                                config.LinkerPackageVersion,
