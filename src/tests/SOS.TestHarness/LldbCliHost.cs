@@ -9,17 +9,15 @@ namespace SOS.TestHarness;
 /// lives in <see cref="LldbHostBase"/>; this type only opens the core and points SOS at the right DAC.
 ///
 /// SOS is the native lldb plugin (<c>libsosplugin.so</c>/<c>.dylib</c>), loaded via <c>plugin load</c>;
-/// its managed extension is hosted on the runtime named by <c>sethostruntime</c>. SOS commands are
-/// dispatched through the plugin's universal <c>sos &lt;command&gt;</c> entry (the lldb analogue of
-/// dbgeng's <c>!command</c>), so a test author writes <c>Sos("clrstack")</c> once and it works on every
-/// host.
+/// its managed extension is provided by the NativeAOT library beside the plugin. SOS commands are dispatched
+/// through the plugin's universal <c>sos &lt;command&gt;</c> entry (the lldb analogue of dbgeng's
+/// <c>!command</c>), so a test author writes <c>Sos("clrstack")</c> once and it works on every host.
 /// </summary>
 public sealed class LldbCliHost : LldbHostBase
 {
     private readonly Flavor _flavor;
     private readonly Dac _dac;
     private readonly CoreVersion _coreVersion;
-    private readonly HostRuntime _hostRuntime;
 
     public override string Name => "lldb";
 
@@ -28,14 +26,12 @@ public sealed class LldbCliHost : LldbHostBase
         Flavor flavor,
         Dac dac = Dac.Legacy,
         CoreVersion coreVersion = CoreVersion.Net10,
-        HostRuntime hostRuntime = HostRuntime.Managed,
         string? targetExe = null,
         HostDiagnostics? diagnostics = null)
     {
         _flavor = flavor;
         _dac = dac;
         _coreVersion = coreVersion;
-        _hostRuntime = hostRuntime;
         StartLldb(diagnostics: diagnostics, captureCrashDumps: true);
 
         // Load the core. Pass the target executable as the module so lldb can map the program image —
@@ -52,9 +48,6 @@ public sealed class LldbCliHost : LldbHostBase
     public override void LoadSos()
     {
         Run($"plugin load \"{ToolPaths.LldbPluginPath}\"");
-        Run(_hostRuntime == HostRuntime.None
-            ? "sethostruntime -none"
-            : $"sethostruntime \"{ToolPaths.HostRuntimeDirectory}\"");
 
         // Self-contained single-file bundles carry coreclr inside the exe, so there is no runtime
         // directory on disk next to which SOS can find the matching DAC. Point SOS's symbol store at the

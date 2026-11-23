@@ -36,7 +36,6 @@ public sealed class ChildEngineClient : ILiveDebuggerHost, IStartupDiagnosticHos
         string? dacDir,
         Dac dac,
         Flavor flavor,
-        HostRuntime hostRuntime,
         IReadOnlyDictionary<string, string>? environmentVariables = null)
     {
         Name = name;
@@ -75,7 +74,6 @@ public sealed class ChildEngineClient : ILiveDebuggerHost, IStartupDiagnosticHos
         }
 
         psi.Environment["_NT_SYMBOL_PATH"] = symbolPath;
-        psi.Environment[DbgEngHostBase.HostRuntimeEnvironmentVariable] = hostRuntime.ToString();
 
         if (mode == "live")
         {
@@ -130,9 +128,8 @@ public sealed class ChildEngineClient : ILiveDebuggerHost, IStartupDiagnosticHos
         string hostName,
         string dumpPath,
         string? dacDir = null,
-        Dac dac = Dac.Legacy,
-        HostRuntime hostRuntime = HostRuntime.Managed) =>
-        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core, hostRuntime);
+        Dac dac = Dac.Legacy) =>
+        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core);
 
     /// <summary>A live child engine that launches the target (parked at the loader break, SOS loaded).</summary>
     public static ChildEngineClient ForLive(
@@ -141,9 +138,8 @@ public sealed class ChildEngineClient : ILiveDebuggerHost, IStartupDiagnosticHos
         string? dacDir = null,
         Dac dac = Dac.Legacy,
         Flavor flavor = Flavor.Core,
-        HostRuntime hostRuntime = HostRuntime.Managed,
         IReadOnlyDictionary<string, string>? environmentVariables = null) =>
-        new(hostName, "live", new[] { exePath }, dacDir, dac, flavor, hostRuntime, environmentVariables);
+        new(hostName, "live", new[] { exePath }, dacDir, dac, flavor, environmentVariables);
 
     public void LoadSos()
     {

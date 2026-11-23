@@ -39,7 +39,6 @@ internal sealed class DumpSession : IPooledHost
     public string DumpPath { get; }
     public CoreVersion CoreVersion { get; }
     public Dac Dac { get; }
-    public HostRuntime HostRuntime { get; }
 
     /// <summary>Captured stdout/stderr and crash dumps for this session's host, or null for the cdb child
     /// host (which does not support capture). Surfaced in a failing test's replay.</summary>
@@ -56,8 +55,7 @@ internal sealed class DumpSession : IPooledHost
     }
 
     internal DumpSession(Host hostKind, string targetName, string stopName, Flavor flavor, string dumpPath,
-                         CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,
-                         HostRuntime hostRuntime = HostRuntime.Managed)
+                         CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy)
     {
         _hostKind = hostKind;
         Host = hostKind;
@@ -67,7 +65,6 @@ internal sealed class DumpSession : IPooledHost
         DumpPath = dumpPath;
         CoreVersion = coreVersion;
         Dac = dac;
-        HostRuntime = hostRuntime;
 
         // Bound resource-heavy dump hosts independently. Cdb uses two slots to retain the suite's
         // observed two-test concurrency without allowing one EngineHost process per memoized session.
@@ -114,7 +111,6 @@ internal sealed class DumpSession : IPooledHost
                 $"Flavor={Flavor}{Environment.NewLine}" +
                 $"CoreVersion={CoreVersion}{Environment.NewLine}" +
                 $"Dac={Dac}{Environment.NewLine}" +
-                $"HostRuntime={HostRuntime}{Environment.NewLine}" +
                 $"DumpPath={DumpPath}{Environment.NewLine}" +
                 $"CommandKind={kind}{Environment.NewLine}" +
                 $"Command={command}",
@@ -126,7 +122,7 @@ internal sealed class DumpSession : IPooledHost
 
     void IPooledHost.OpenHost()
     {
-        _host = HostFactory.CreateDumpHost(_hostKind, Flavor, DumpPath, Dac, CoreVersion, HostRuntime,
+        _host = HostFactory.CreateDumpHost(_hostKind, Flavor, DumpPath, Dac, CoreVersion,
             SnapshotStore.TargetExe(Flavor, TargetName, CoreVersion), _diagnostics);
         _host.LoadSos();
     }

@@ -41,17 +41,15 @@ public static class ToolPaths
     public static string LldbExe => s_lldbExe.Value;
 
     /// <summary>
-    /// The .NET runtime directory SOS hosts its managed extension on (the <c>sethostruntime</c> target).
-    /// Defaults to the repo's locally-acquired <c>.dotnet</c> shared runtime (highest net10 present), so the
-    /// host runtime is deterministic and hermetic rather than auto-detected from <c>PATH</c>. Set
-    /// <c>SOSHARNESS_HOST_RUNTIME_DIR</c> to validate SOS against another complete runtime layout.
+    /// The .NET runtime directory containing <c>createdump</c>. Defaults to the repo's locally-acquired
+    /// <c>.dotnet</c> shared runtime. Set <c>SOSHARNESS_CREATEDUMP_RUNTIME_DIR</c> to use another layout.
     /// </summary>
-    public static string HostRuntimeDirectory => s_hostRuntimeDirectory.Value;
+    public static string CreateDumpRuntimeDirectory => s_createDumpRuntimeDirectory.Value;
 
     /// <summary>
-    /// Full path to the <c>createdump</c> executable the debugger host's hosted .NET runtime can use to
-    /// write a crash dump. NativeAOT components (notably the universal cDAC) may not have a neighboring
-    /// <c>createdump</c>, so the crash-dump environment points explicitly at the one from the host runtime.
+    /// Full path to the <c>createdump</c> executable used to write a crash dump. NativeAOT components
+    /// (notably the universal cDAC) may not have a neighboring <c>createdump</c>, so the crash-dump
+    /// environment points explicitly at one from the provisioned test runtime.
     /// </summary>
     public static string CreateDumpPath => s_createDumpPath.Value;
 
@@ -86,7 +84,7 @@ public static class ToolPaths
     private static readonly Lazy<string> s_sosPath = new(ResolveSosPath);
     private static readonly Lazy<string> s_lldbPluginPath = new(ResolveLldbPluginPath);
     private static readonly Lazy<string> s_lldbExe = new(ResolveLldbExe);
-    private static readonly Lazy<string> s_hostRuntimeDirectory = new(ResolveHostRuntimeDirectory);
+    private static readonly Lazy<string> s_createDumpRuntimeDirectory = new(ResolveCreateDumpRuntimeDirectory);
     private static readonly Lazy<string> s_createDumpPath = new(ResolveCreateDumpPath);
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<CoreVersion, string?> s_singleFileDacDirectory = new();
 
@@ -215,9 +213,9 @@ public static class ToolPaths
         return Directory.Exists(sharedFrameworks) ? sharedFrameworks : null;
     }
 
-    private static string ResolveHostRuntimeDirectory()
+    private static string ResolveCreateDumpRuntimeDirectory()
     {
-        string? configuredDirectory = Environment.GetEnvironmentVariable("SOSHARNESS_HOST_RUNTIME_DIR");
+        string? configuredDirectory = Environment.GetEnvironmentVariable("SOSHARNESS_CREATEDUMP_RUNTIME_DIR");
         if (!string.IsNullOrEmpty(configuredDirectory))
         {
             string directory = Path.GetFullPath(configuredDirectory);
@@ -232,14 +230,12 @@ public static class ToolPaths
             }
 
             throw new DirectoryNotFoundException(
-                $"The configured SOS harness host runtime directory '{directory}' must contain " +
+                $"The configured SOS harness createdump runtime directory '{directory}' must contain " +
                 $"{coreClrName} and System.Private.CoreLib.dll.");
         }
 
-        // SOS hosts its managed extension on a deterministic runtime from the selected layout. The macOS
-        // Helix payload uses the net11 runtime containing the required CoreCLR hosting fix.
         string sharedRoot = Path.Combine(RepoLayout.DotNetRoot, "shared", "Microsoft.NETCore.App");
-        string majorPrefix = OperatingSystem.IsMacOS() && RepoLayout.IsHelix ? "11.0." : "10.0.";
+        string majorPrefix = "10.0.";
         if (Directory.Exists(sharedRoot))
         {
             string? best = Directory.GetDirectories(sharedRoot)
@@ -254,13 +250,13 @@ public static class ToolPaths
         }
 
         throw new DirectoryNotFoundException(
-            $"Could not locate a {majorPrefix.TrimEnd('.')} host runtime under '{sharedRoot}'.");
+            $"Could not locate a {majorPrefix.TrimEnd('.')} createdump runtime under '{sharedRoot}'.");
     }
 
     private static string ResolveCreateDumpPath()
     {
         string exe = OperatingSystem.IsWindows() ? "createdump.exe" : "createdump";
-        string candidate = Path.Combine(HostRuntimeDirectory, exe);
+        string candidate = Path.Combine(CreateDumpRuntimeDirectory, exe);
         if (File.Exists(candidate))
         {
             return candidate;
