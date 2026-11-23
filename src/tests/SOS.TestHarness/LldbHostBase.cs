@@ -423,9 +423,9 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
 
             // The readers can still be inside StreamReader after the process exits. Join them before
             // disposing Process so teardown cannot invalidate StandardOutput/StandardError mid-read.
-            _reader.Join(10000);
+            _reader?.Join(10000);
             _stderrReader?.Join(10000);
-            _process.Dispose();
+            _process?.Dispose();
         }
     }
 }

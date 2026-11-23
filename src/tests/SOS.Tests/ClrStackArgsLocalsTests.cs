@@ -30,11 +30,11 @@ public sealed class ClrStackArgsLocalsTests
             Flavor.Core,
             dumpKind: DumpKind.Mini);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopArgsLocals, ForTarget = TargetCatalog.Scenarios)]
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_ArgsLocals(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, config.Target == TargetCatalog.Scenarios ? TargetCatalog.StopArgsLocals : null);
         if (config.Target == TargetCatalog.Scenarios)
         {
             target.GoToStopPoint(TargetCatalog.StopArgsLocals);
@@ -102,13 +102,13 @@ public sealed class ClrStackArgsLocalsTests
         }
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopArgsLocals)]
     [MemberData(nameof(MiniDumpMatrix))]
     public async Task ClrStack_ICorDebugLocalsFromMiniDump(TestConfig config)
     {
         SOSTestSkips.SkipICorDebugStackWalk(config);
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopArgsLocals);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
 
         SosOutput stack = target.Sos("clrstack -i -l");

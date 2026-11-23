@@ -139,6 +139,8 @@ public static class SnapshotStore
 
         bool isCrash = target.StopPoints.Any(s => s.Kind == StopKind.Crash);
 
+        using HostSlotPool.Reservation reservation = HostSlotPool.Shared.Reserve(
+            SessionKind.Capture, cancellationToken: HarnessCancellation.Token);
         if (flavor == Flavor.Framework)
         {
             // Desktop: no diagnostics IPC; dbgeng captures both snapshot (bpmd) and crash (second-chance).
@@ -189,13 +191,10 @@ public static class SnapshotStore
         ApplyGcType(psi, gcType);
         ApplyTargetEnvironment(psi, target);
 
-        using Process p = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start Capturer");
-        string stdout = p.StandardOutput.ReadToEnd();
-        string stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit();
-        if (p.ExitCode != 0)
+        (int exitCode, string stdout, string stderr) = RunCapture(psi);
+        if (exitCode != 0)
         {
-            throw new InvalidOperationException($"Capturer failed for {target.Name} ({p.ExitCode}):\n{stdout}\n{stderr}");
+            throw new InvalidOperationException($"Capturer failed for {target.Name} ({exitCode}):\n{stdout}\n{stderr}");
         }
     }
 
@@ -228,11 +227,7 @@ public static class SnapshotStore
         ApplyGcType(psi, gcType);
         ApplyTargetEnvironment(psi, target);
 
-        using Process process = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to launch target");
-        string stdout = process.StandardOutput.ReadToEnd();
-        string stderr = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+        (int exitCode, string stdout, string stderr) = RunCapture(psi);
 
         if (!File.Exists(dumpPath))
         {
@@ -244,7 +239,7 @@ public static class SnapshotStore
                 stderr);
 
             throw new InvalidOperationException(
-                $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {process.ExitCode}.\n" +
+                $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {exitCode}.\n" +
                 $"stdout:\n{stdout}\n" +
                 $"stderr:\n{stderr}");
         }
@@ -376,15 +371,9 @@ public static class SnapshotStore
         ApplyGcType(psi, gcType);
         ApplyTargetEnvironment(psi, target);
 
-        using Process process = Process.Start(psi)
-            ?? throw new InvalidOperationException("Failed to launch target");
-        Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
-        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
-        process.WaitForExit();
-        string stdout = stdoutTask.GetAwaiter().GetResult();
-        string stderr = stderrTask.GetAwaiter().GetResult();
+        (int exitCode, string stdout, string stderr) = RunCapture(psi);
 
-        if (process.ExitCode != 0)
+        if (exitCode != 0)
         {
             SkipKnownCreatedumpPermissionFailure(
                 coreVersion,
@@ -394,9 +383,30 @@ public static class SnapshotStore
                 stderr);
 
             throw new InvalidOperationException(
-                $"Target '{target.Project}' ({flavor}) failed ({process.ExitCode}):\n" +
+                $"Target '{target.Project}' ({flavor}) failed ({exitCode}):\n" +
                 $"stdout:\n{stdout}\n" +
                 $"stderr:\n{stderr}");
+        }
+    }
+
+    private static (int ExitCode, string Stdout, string Stderr) RunCapture(ProcessStartInfo start)
+    {
+        using Process process = Process.Start(start)
+            ?? throw new InvalidOperationException("Failed to launch capture");
+        Task<string> stdout = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
+        try
+        {
+            process.WaitForExitAsync(HarnessCancellation.Token).GetAwaiter().GetResult();
+            return (process.ExitCode, stdout.GetAwaiter().GetResult(), stderr.GetAwaiter().GetResult());
+        }
+        finally
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit();
+            }
         }
     }
 

@@ -43,12 +43,12 @@ public sealed class ObjectInspectionTests
         return data;
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DumpObjChainMatrix))]
     public async Task DumpObj_Mt_Class_Md_Chain(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong marker = target.FindUniqueObject("ThinLockMarker");
@@ -94,12 +94,12 @@ public sealed class ObjectInspectionTests
         target.Sos($"do {marker:x}").AssertContains("ThinLockMarker");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DumpObjNoFieldsMatrix))]
     public async Task DumpObj_NoFields_OmitsFieldTable(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong marker = target.FindUniqueObject("FieldMarker");
@@ -112,11 +112,11 @@ public sealed class ObjectInspectionTests
         Assert.Equal(full.MethodTable, noFields.MethodTable);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Ip2md_ResolvesJittedMethodWithSource(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // AtHeap() raises the heap stop, so it is jitted; name2ee gives us its native entry point.

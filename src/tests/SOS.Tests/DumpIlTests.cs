@@ -16,11 +16,11 @@ public sealed class DumpIlTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpIl_DecodesKnownMethod(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
         EEMatch atHeap = Method(target, config.Flavor, "AtHeap");
 
@@ -39,11 +39,11 @@ public sealed class DumpIlTests
         Assert.Equal(new[] { "ldstr", "call", "nop", "ret" }, byPointer.Instructions.Select(i => i.OpCode));
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpIl_RejectsEmptyExpression(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("dumpil 0").AssertContains("Must pass a valid expression");

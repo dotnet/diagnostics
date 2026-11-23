@@ -15,7 +15,7 @@ public sealed class ClrStackRuntimeFramesTests
     public static TheoryData<TestConfig> SoftwareMatrix { get; } =
         TestMatrices.StackWalk([TargetCatalog.SimpleThrow]);
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(FaultingMatrix))]
     public Task ClrStack_ReportsFaultingExceptionFrame(TestConfig config)
     {
@@ -23,7 +23,7 @@ public sealed class ClrStackRuntimeFramesTests
         return AssertExceptionFrame(config, "FaultingExceptionFrame");
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(SoftwareMatrix))]
     public Task ClrStack_ReportsSoftwareExceptionFrame(TestConfig config)
     {
@@ -41,7 +41,7 @@ public sealed class ClrStackRuntimeFramesTests
             OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X86,
             "Exception-frame tests do not support x86 on Windows.");
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         SosTable stack = target.Clrstack();

@@ -19,12 +19,12 @@ public sealed class ObjectFieldsTests
     public static TheoryData<TestConfig> Matrix => TestMatrices.CoreFramework([TargetCatalog.Scenarios]);
     public static TheoryData<TestConfig> CoreMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpObj_Fields_ReportKnownValues(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         DumpObjResult obj = target.DumpObj(target.FindUniqueObject("FieldMarker"));
@@ -47,12 +47,12 @@ public sealed class ObjectFieldsTests
         Assert.NotEqual(0ul, ObjectCommandParsing.Hex(textField.Value)); // its value is the string's address
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(CoreMatrix))]
     public async Task DumpObj_StaticReferenceField(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         DumpObjResult marker = target.DumpObj(target.FindUniqueObject("FieldMarker"));
@@ -64,12 +64,12 @@ public sealed class ObjectFieldsTests
         Assert.NotEqual(0ul, ObjectCommandParsing.Hex(empty.Value));
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpVc_ReadsEmbeddedStructFields(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         DumpObjResult obj = target.DumpObj(target.FindUniqueObject("FieldMarker"));

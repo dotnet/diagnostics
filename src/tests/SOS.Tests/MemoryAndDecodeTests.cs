@@ -29,11 +29,11 @@ public sealed class MemoryAndDecodeTests
         Liveness.Dump,
         dumpKind: DumpKind.Mini);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task MemoryDumpers_ShowKnownFieldBytes(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // The memory dumpers are dotnet-dump REPL commands (cdb uses the native d*/dp/db). FieldMarker's
@@ -67,11 +67,11 @@ public sealed class MemoryAndDecodeTests
         target.Sos($"db {marker:x}").AssertContains(":"); // byte dump prints "<addr>: <bytes>"
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(MiniDumpMatrix))]
     public async Task MemoryDumper_MapsOmittedManagedModuleData(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ClrModuleInfo coreLib = target.ClrModules().SingleByName("System.Private.CoreLib.dll");
@@ -149,11 +149,11 @@ public sealed class MemoryAndDecodeTests
             $"No omitted {ReadSize}-byte range was found in the CoreLib image.");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(ScenariosMatrix))]
     public async Task ThreadState_DecodesStateFlags(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // Take a real thread-state value from clrthreads and decode it.
@@ -171,11 +171,11 @@ public sealed class MemoryAndDecodeTests
         Assert.DoesNotContain("Unrecognized", decoded.Text, StringComparison.Ordinal);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task TaskState_DecodesTaskStatus(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // taskstate is a managed extension command (dotnet-dump only). The async gate's Task<int> is awaited
@@ -184,12 +184,12 @@ public sealed class MemoryAndDecodeTests
         target.Sos($"taskstate {task:x}").AssertContains("WaitingForActivation");
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(NestedExceptionMatrix))]
     public async Task DumpExceptions_ListsManagedExceptions(TestConfig config)
     {
         // A crash target's dump has the thrown exception(s) on the heap.
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         SosOutput exceptions = target.Sos("dumpexceptions");

@@ -30,11 +30,11 @@ public sealed class GcInspectionTests
         coreVersion: CoreVersion.All & ~(CoreVersion.Net8 | CoreVersion.Net9),
         dac: Dac.Legacy);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(PohMatrix))]
     public async Task GcRoot_FindsRootsForPohObject(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         string module = TargetCatalog.Get(config.Target).ModuleFor(config.Flavor);
@@ -62,11 +62,11 @@ public sealed class GcInspectionTests
         roots.AssertContains("System.Byte[]");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task GcRoot_FindsRootsForLive_NoneForDead(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // The live marker is rooted by a static, so gcroot finds at least one root and names the object.
@@ -125,11 +125,11 @@ public sealed class GcInspectionTests
         roots.AssertContains(arrayAddress.ToString("x"));
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task ObjSize_CountsTransitiveClosure(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // The fieldless live marker keeps only itself alive.
@@ -144,11 +144,11 @@ public sealed class GcInspectionTests
         Assert.True(fieldBytes > 0);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task GcHandles_ReportsHandleSummary(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         SosOutput handles = target.Sos("gchandles -stat");
@@ -157,11 +157,11 @@ public sealed class GcInspectionTests
         Assert.True(strong.Success && int.Parse(strong.Groups[1].Value) > 0, $"expected strong handles:\n{handles.Text}");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task FinalizeQueue_ReportsStructure(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         SosOutput fq = target.Sos("finalizequeue -stat");
@@ -169,11 +169,11 @@ public sealed class GcInspectionTests
         Assert.Matches(@"generation 0 has \d+ objects", fq.Text);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task GcHeapStat_ReportsGenerationSizes(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         SosOutput stat = target.Sos("gcheapstat");
@@ -183,7 +183,7 @@ public sealed class GcInspectionTests
         Assert.True(long.Parse(heap0.Groups[1].Value) > 0, "gen0 allocated size should be positive");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopGen1)]
     [MemberData(nameof(Matrix))]
     public async Task VerifyHeap_ReportsNoCorruption(TestConfig config)
     {
@@ -202,7 +202,7 @@ public sealed class GcInspectionTests
                 "https://github.com/dotnet/diagnostics/issues/5985: legacy DAC SyncBlock data is unavailable for macOS .NET 11 dumps.");
         }
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopGen1);
         target.GoToStopPoint(TargetCatalog.StopGen1);
 
         SosOutput verify = target.Sos("verifyheap");
@@ -210,11 +210,11 @@ public sealed class GcInspectionTests
         verify.AssertContains("No heap corruption detected");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpGen_ListsGenerationObjects(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // dumpgen gen0 is the dedicated "objects in a generation" command; our thin-lock marker lives there.
@@ -222,11 +222,11 @@ public sealed class GcInspectionTests
         gen0.AssertContains("ThinLockMarker");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpGen_ArgumentsAndFilters(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("dumpgen").AssertContains("Generation argument is missing");
@@ -249,11 +249,11 @@ public sealed class GcInspectionTests
             .AssertContains(marker.ToString("x"));
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = "ready")]
     [MemberData(nameof(DumpGenMatrix))]
     public async Task DumpGen_ReportsExactGenerationPopulations(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, "ready");
         target.GoToStopPoint("ready");
         using IDisposable session = target.AcquireDebuggerSession();
 

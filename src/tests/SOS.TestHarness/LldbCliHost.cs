@@ -36,6 +36,19 @@ public sealed class LldbCliHost : LldbHostBase
         _dac = dac;
         _coreVersion = coreVersion;
         _hostRuntime = hostRuntime;
+        try
+        {
+            Initialize(dumpPath, targetExe, diagnostics);
+        }
+        catch
+        {
+            Dispose();
+            throw;
+        }
+    }
+
+    private void Initialize(string dumpPath, string? targetExe, HostDiagnostics? diagnostics)
+    {
         StartLldb(diagnostics: diagnostics, captureCrashDumps: true);
 
         // Load the core. Pass the target executable as the module so lldb can map the program image —

@@ -20,11 +20,11 @@ public sealed class DumpHeapLiveDeadTests
     private const string LiveType = "LiveUniqueMarker";
     private const string DeadType = "DeadUniqueMarker";
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(Matrix))]
     public async Task DumpHeap_LiveAndDead(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         // Baseline: both objects are on the heap (the unfiltered walk sees live and dead alike).

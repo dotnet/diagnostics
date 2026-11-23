@@ -118,6 +118,72 @@ sessions. A session is memoized by host, target, stop, flavor, GC type, dump
 kind, runtime, and DAC. Live targets are never shared because command execution
 advances the process; every caller receives an isolated debuggee.
 
+### Single-stop theory collections
+
+`[SosDumpTheory]` opts a theory into dump-affinity grouping while retaining its
+`[MemberData]`, individual row results, and command-oriented test class. Its
+discoverer assigns dump rows to collections keyed by the complete debugger
+configuration and stop. A second string argument supplies the stop; otherwise
+the target's default stop is used. `StopName` and `ForTarget` can override that
+choice for a target-specific stop. `[WindowsDumpTheory]` applies the same
+grouping while preserving Windows-only discovery.
+
+Opted-in methods acquire their cursor with
+`DumpCollectionFixture.GetTargetAsync(config, optionalStopName)`. The collection
+fixture lazily captures the dump and reserves a debugger slot, retains the
+session across its selected cases, and closes it at collection teardown.
+Initialization and disposal are serialized asynchronously; failed initialization
+can be retried, and disposed fixtures cannot reopen. Collection cursors reject
+navigation to any other stop. Tests must restore any debugger-global state they
+change, including on assertion failures.
+
+Collection reservations, ordinary dump commands, live targets, dump capture,
+and direct LLDB hosting probes share one backend-neutral session pool.
+Reservations are thread-independent; command leases remain
+synchronous and thread-affine. Never await while holding
+`AcquireDebuggerSession()`, or retain a command lease while navigating.
+Live rows, deferred-enumeration theories, and theories in explicitly defined
+collections keep ordinary execution. Multi-stop tests remain ordinary theories
+and release their command leases before requesting the next stop.
+
+All 113 single-stop methods use dump-affinity theories. The two multi-stop
+methods and four live debugger-control methods remain ordinary theories.
+The matrices, assertions, platform skips, and separate row results are unchanged.
+
+The assembly uses xUnit's conservative parallel algorithm. Its admission
+limit covers an entire collection, allowing a slot-owning collection to finish
+its remaining cases and release its reservation even with one or two parallel
+collections. The aggressive algorithm is overridden with a warning: ordinary dump
+commands wait synchronously for slots and could otherwise block the workers
+needed by a slot owner.
+
+Collection admission and the shared session budget use one limit on every
+platform: `min(8, Environment.ProcessorCount)` by default. Override both with
+xUnit's `--max-threads N` option or its `maxParallelThreads` configuration setting.
+An explicit zero requests the processor count; `--parallel none` uses one
+session. Unlimited parallelism warns and uses the default limit because the
+session budget must remain bounded. No separate `SOSHARNESS_MAX_SESSIONS` or `SOSHARNESS_MAX_LIVE`
+setting is used.
+
+`SosTestFramework` resolves the execution options and initializes the shared
+pool before delegating to xUnit's standard executor. Discovery, collection
+scheduling, and fixture execution still use the standard xUnit implementation.
+A session counts once,
+including its debuggee and capture helpers, rather than once per OS process.
+Idle dump analyzers count toward the same limit but can be evicted by any
+session kind. Ordinary sessions prefer their cached analyzer, then empty
+slots, then the least-recently-used idle analyzer; they have no fixed slot
+assignment. Collection reservations remain pinned until teardown.
+
+Capture takes and returns its reservation before dump analysis reserves a
+slot, so a one-session budget still makes progress. Never acquire a second
+session reservation while holding the first. The harness writes
+`session-budget.json` to the Helix upload directory (locally,
+`artifacts/TestResults/SOS.Tests`) at process exit, including the configured
+limit, peak reserved sessions, cache hits, evictions, and cumulative admission
+wait time by session kind. The unified policy on formerly restricted Unix
+hosts still requires cross-platform CI validation.
+
 ### Debugger hosts and isolation
 
 Tests issue the same `target.Sos("command")` call through `IDebuggerHost`.
@@ -140,9 +206,8 @@ The successful candidate uses the provisioned SOS host runtime; no runtime is
 built or downloaded by these tests.
 
 Debugger stdout, stderr, command lines, and host crash dumps are retained by
-`HostDiagnostics`. Dotnet-dump sessions use a single process slot because idle
-REPL children busy-wait; dump sessions are otherwise safe to share. Live
-sessions are bounded by `SOSHARNESS_MAX_LIVE`.
+`HostDiagnostics`. The shared session budget bounds retained mappings and idle
+REPL processes as well as live debugging, capture, and hosting probes.
 
 ### Stable oracles and output parsing
 
@@ -171,11 +236,11 @@ default oracle.
 public static TheoryData<TestConfig> Matrix =>
     TestConfig.BuildMatrix([TargetCatalog.NestedException]);
 
-[SosTheory]
+[SosDumpTheory]
 [MemberData(nameof(Matrix))]
 public async Task PrintException_Data(TestConfig config)
 {
-    using Target target = await Targets.GetTargetAsync(config);
+    using Target target = await DumpCollectionFixture.GetTargetAsync(config);
     target.GoToFirstStop();
 
     SosOutput output = target.Sos("printexception");

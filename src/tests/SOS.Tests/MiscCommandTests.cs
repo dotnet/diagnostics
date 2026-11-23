@@ -16,19 +16,19 @@ public sealed class MiscCommandTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task SessionCommands_Execute(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
         using IDisposable debuggerSession = target.AcquireDebuggerSession();
 
-        // dbgout toggles internal debug logging and reports the new state.
-        target.Sos("dbgout").AssertContains("Debug output logging");
-
         try
         {
+            // dbgout toggles internal debug logging and reports the new state.
+            target.Sos("dbgout").AssertContains("Debug output logging");
+
             // sosflush resets SOS's cached state; it produces no output but must run cleanly. The cDAC
             // implements IXCLRDataProcess::Flush (dotnet/runtime Legacy/SOSDacImpl.IXCLRDataProcess.cs), so this
             // works on every host/DAC including net11 + cDAC.

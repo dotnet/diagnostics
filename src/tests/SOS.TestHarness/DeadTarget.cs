@@ -13,12 +13,14 @@ namespace SOS.TestHarness;
 public sealed class DeadTarget : Target
 {
     private readonly TestConfig _config;
+    private readonly DumpSession? _boundSession;
     private DumpSession? _current;
 
-    internal DeadTarget(TestConfig config)
+    internal DeadTarget(TestConfig config, DumpSession? boundSession = null)
         : base(config.Host, config.Target, config.Flavor)
     {
         _config = config;
+        _boundSession = boundSession;
     }
 
     public override string DumpPath => Current.DumpPath;
@@ -27,13 +29,28 @@ public sealed class DeadTarget : Target
     protected override void GoToStopPointCore(string stopName)
     {
         StopPoint stop = TargetCatalog.Get(TargetName).Stop(stopName);
-        _current = Targets.ResolveSession(_config, stop.Name);
+        _current = ResolveSession(stop.Name);
     }
 
     protected override void GoToCrashCore()
     {
         StopPoint crash = TargetCatalog.Get(TargetName).StopPoints.Single(s => s.Kind == StopKind.Crash);
-        _current = Targets.ResolveSession(_config, crash.Name);
+        _current = ResolveSession(crash.Name);
+    }
+
+    private DumpSession ResolveSession(string stop)
+    {
+        if (_boundSession is null)
+        {
+            return Targets.ResolveSession(_config, stop);
+        }
+
+        if (_boundSession.StopName != stop)
+        {
+            throw new InvalidOperationException("A collection-owned target cannot navigate to a different stop.");
+        }
+
+        return _boundSession;
     }
 
     protected override SosOutput SosCore(string command) => Current.Sos(command);
@@ -48,5 +65,5 @@ public sealed class DeadTarget : Target
         _current ?? throw new InvalidOperationException(
             "Target is not at a point yet; call GoToStopPoint(...) or GoToCrash() before Sos.");
 
-    // Sessions are owned and disposed by the Targets registry; the cursor owns nothing.
+    // The registry or collection fixture owns the session; the cursor owns nothing.
 }

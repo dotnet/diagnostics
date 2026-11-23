@@ -23,11 +23,11 @@ public sealed class ClrUTests
     // needs none of that, so it stays on the default Heap Matrix.
     public static TheoryData<TestConfig> FullDumpMatrix => TestMatrices.FullDumpOnCoreVersions([TargetCatalog.Scenarios], CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10, Flavor.AllValid, Host.Cdb);
 
-    [WindowsTheory]
+    [WindowsDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(FullDumpMatrix))]
     public async Task ClrU_StructureLinesOffsets(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
         EEMatch atHeap = Method(target, config.Flavor, "AtHeap");
 
@@ -56,11 +56,11 @@ public sealed class ClrUTests
         Assert.Equal(0, offsets.Instructions[0].Offset);
     }
 
-    [WindowsTheory]
+    [WindowsDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(FullDumpMatrix))]
     public async Task ClrU_InterleavesGcInfoEhInfoIl(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
         EEMatch atHeap = Method(target, config.Flavor, "AtHeap");
         EEMatch lockHolder = Method(target, config.Flavor, "LockHolder");
@@ -93,11 +93,11 @@ public sealed class ClrUTests
         Assert.Contains(target.EhInfo(lockHolder.MethodDesc.Value).Clauses, c => c.Kind.Contains("FINALLY", StringComparison.Ordinal));
     }
 
-    [WindowsTheory]
+    [WindowsDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task ClrU_AcceptsInstructionPointer(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
         EEMatch atHeap = Method(target, config.Flavor, "AtHeap");
 

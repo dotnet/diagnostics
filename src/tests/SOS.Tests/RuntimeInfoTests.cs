@@ -20,11 +20,11 @@ public sealed class RuntimeInfoTests
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
     public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task EeVersion_ReportsRuntimeAndSosVersion(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         SosOutput ee = target.Sos("eeversion");
@@ -32,11 +32,11 @@ public sealed class RuntimeInfoTests
         ee.AssertContains("SOS Version:");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task ClrModulesAndAssemblies_ListDebuggeeModule(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // The CLR module list and the assembly list both include the debuggee, on every host.
@@ -44,13 +44,13 @@ public sealed class RuntimeInfoTests
         target.Sos("assemblies").AssertContains("SosHarnessScenarios");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task Modules_Registers_Threads_DotnetDumpOnly(TestConfig config)
     {
         // modules, registers and threads are provided by the dotnet-dump REPL; the dbgeng (cdb) host uses
         // the native debugger's lm / r / ~ instead, so these names exist only under dotnet-dump.
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("modules").AssertContains("SosHarnessScenarios");
@@ -69,11 +69,11 @@ public sealed class RuntimeInfoTests
             $"expected multiple threads:\n{threads.Text}");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Runtimes_ReportsLoadedRuntime(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         SosOutput runtimes = target.Sos("runtimes");
@@ -81,11 +81,11 @@ public sealed class RuntimeInfoTests
         Assert.Matches(@"\d+\.\d+\.\d+", runtimes.Text);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpRuntimeTypes_ListsRuntimeTypeObjects(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         SosOutput types = target.Sos("dumpruntimetypes");

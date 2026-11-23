@@ -11,11 +11,11 @@ public sealed class DynamicMethodTests
     public static TheoryData<TestConfig> Matrix => TestMatrices.HeapEnumeration([TargetCatalog.DynamicMethod]);
     public static TheoryData<TestConfig> VariablesMatrix => TestMatrices.StackWalk([TargetCatalog.DynamicMethod], flavor: Flavor.Core, liveness: Liveness.AllValid);
 
-    [SosTheory(SkipTestWithoutData = true)]
+    [SosDumpTheory(SkipTestWithoutData = true)]
     [MemberData(nameof(Matrix))]
     public async Task DumpIl_DecodesEmittedDynamicMethod(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         // Runtime helpers also emit DynamicMethods; select the debuggee's Fibonacci body, not the first object.
@@ -25,13 +25,13 @@ public sealed class DynamicMethodTests
         AssertFibonacciIl(fibonacci);
     }
 
-    [SosTheory(SkipTestWithoutData = true)]
+    [SosDumpTheory(SkipTestWithoutData = true)]
     [MemberData(nameof(VariablesMatrix))]
     public async Task ClrStack_DynamicLocalFeedsDumpIl(TestConfig config)
     {
         SOSTestSkips.SkipICorDebugStackWalk(config);
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         IReadOnlyList<TargetExtensions.IcorFrame> frames = target.ClrstackICorDebug(variables: true);
