@@ -7,7 +7,6 @@
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <SOSPackagePathPrefix>tools/$(TargetFramework)/any</SOSPackagePathPrefix>
-    <RequireSOSExtensionsBinaries>true</RequireSOSExtensionsBinaries>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
@@ -21,13 +20,4 @@
 
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
 
-  <ItemGroup>
-    <None Include="@(SOSExtensionsBinaries)">
-      <Visible>false</Visible>
-      <Pack>true</Pack>
-      <PackagePath>$(SOSPackagePathPrefix)/lib/%(TargetFramework)</PackagePath>
-      <Link Condition="'$(PublishSingleFile)' == 'true'">lib/%(TargetFramework)/%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true'">PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 </Project>
