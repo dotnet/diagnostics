@@ -175,6 +175,13 @@ DECLARE_API(DumpAssembly)
     return ExecuteManagedOnlyCommand("dumpassembly", args);
 }
 
+DECLARE_API(DumpDomain)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("dumpdomain", args);
+}
+
 DECLARE_API(logging)
 {
     INIT_API_EXT();

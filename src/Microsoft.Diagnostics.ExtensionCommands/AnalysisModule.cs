@@ -50,6 +50,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<DumpAsyncCommand>();
             commandService.AddCommands<DumpConcurrentDictionaryCommand>();
             commandService.AddCommands<DumpConcurrentQueueCommand>();
+            commandService.AddCommands<DumpDomainCommand>();
             commandService.AddCommands<DumpExceptionsCommand>();
             commandService.AddCommands<DumpGenCommand>();
             commandService.AddCommands<DumpHeapCommand>();

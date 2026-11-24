@@ -10,7 +10,6 @@ DumpALC
 DumpArray
 DumpClass
 DumpDelegate
-DumpDomain
 DumpGCData
 DumpIL
 DumpMD
