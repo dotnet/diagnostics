@@ -2121,66 +2121,6 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
 *    given address
 *                                                                      *
 \**********************************************************************/
-DECLARE_API(DumpObj)
-{
-    INIT_API_PROBE_MANAGED("dumpobj");
-
-    MINIDUMP_NOT_SUPPORTED();
-
-    BOOL dml = FALSE;
-    BOOL bNoFields = FALSE;
-    BOOL bRefs = FALSE;
-    StringHolder str_Object;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-nofields", &bNoFields, COBOOL, FALSE},
-        {"-refs", &bRefs, COBOOL, FALSE},
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&str_Object.data, COSTRING}
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return E_INVALIDARG;
-    }
-
-    DWORD_PTR p_Object = GetExpression(str_Object.data);
-    EnableDMLHolder dmlHolder(dml);
-    if (p_Object == 0)
-    {
-        ExtOut("Invalid parameter %s\n", args);
-        return E_INVALIDARG;
-    }
-
-    try {
-        Status = PrintObj(p_Object, !bNoFields);
-
-        if (SUCCEEDED(Status) && bRefs)
-        {
-            std::stringstream argsBuilder;
-            argsBuilder << std::hex << p_Object << " ";
-            return ExecuteCommand("dumpobjgcrefs", argsBuilder.str().c_str());
-        }
-    }
-    catch(const sos::Exception &e)
-    {
-        ExtOut("%s\n", e.what());
-        return E_FAIL;
-    }
-
-    return Status;
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to dump the contents of an object from a  *
-*    given address                                                     *
-*                                                                      *
-\**********************************************************************/
 DECLARE_API(DumpALC)
 {
     INIT_API();

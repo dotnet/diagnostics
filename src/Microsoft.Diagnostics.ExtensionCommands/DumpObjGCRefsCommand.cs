@@ -30,6 +30,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 throw new ArgumentException($"Invalid object address: '{ObjectAddress}'", nameof(ObjectAddress));
             }
 
+            WriteReferences(objAddress);
+        }
+
+        internal void WriteReferences(ulong objAddress)
+        {
+            if (Runtime == null)
+            {
+                throw new DiagnosticsException(RuntimeNotFoundMessage);
+            }
+
             ClrObject obj = Runtime.Heap.GetObject(objAddress);
             if (!obj.IsValid)
             {

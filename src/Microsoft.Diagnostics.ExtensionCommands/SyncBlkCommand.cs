@@ -41,11 +41,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             uint count = data.SyncBlockCount;
             string padding = memory.PointerSize == 8 ? "        " : "";
             WriteLine($"Index{padding} SyncBlock MonitorHeld Recursion Owning Thread Info{padding}  SyncBlock Owner");
-            DacpUsefulGlobalsData globals = default;
-            if (dac.GetUsefulGlobals(&globals) < 0)
-            {
-                globals = default;
-            }
             uint free = 0, ccw = 0, rcw = 0, factories = 0;
             for (ulong index = requestedIndex == 0 ? 1 : requestedIndex; index <= count; index++)
             {
@@ -72,7 +67,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             {
                                 Write("  ");
                                 WriteDacAddressLink(Console, data.Object, memory.PointerSize, "DumpObj", DmlEnabled);
-                                Write($" {GetObjectTypeName(dac, data.Object, globals)}");
+                                Write($" {GetObjectTypeName(dac, data.Object, memory.PointerSize)}");
                             }
                         }
                         WriteLine(isFree ? " Free" : "");
@@ -143,40 +138,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     return;
                 }
                 Write($"{threadIndex,4} ");
-            }
-        }
-
-        private unsafe string GetObjectTypeName(ISOSDacInterface dac, ulong address, DacpUsefulGlobalsData globals)
-        {
-            DacpObjectData data = default;
-            if (dac.GetObjectData(address, &data) < 0)
-            {
-                return "<error>";
-            }
-
-            ulong methodTable = data.MethodTable & ~(ulong)(memory.PointerSize - 1);
-            if (methodTable != 0 && methodTable == globals.FreeMethodTable)
-            {
-                return "Free";
-            }
-
-            bool array = methodTable != 0 && methodTable == globals.ArrayMethodTable && data.ElementTypeHandle != 0;
-            if (array)
-            {
-                methodTable = data.ElementTypeHandle;
-            }
-            uint needed = 0;
-            if (dac.GetMethodTableName(methodTable, 0, null, &needed) < 0 || needed == 0)
-            {
-                return "<error>";
-            }
-
-            char[] name = new char[needed];
-            fixed (char* buffer = name)
-            {
-                return dac.GetMethodTableName(methodTable, needed, buffer, null) >= 0
-                    ? ReadNullTerminatedString(name) + (array ? "[]" : "")
-                    : "<error>";
             }
         }
     }

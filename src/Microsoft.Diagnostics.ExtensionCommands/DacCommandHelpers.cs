@@ -16,10 +16,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         internal static string FormatDacAddress(ulong address, int pointerSize, bool upperCase = false) => ToTargetAddress(address, pointerSize).ToString(
             pointerSize == 4 ? (upperCase ? "X8" : "x8") : (upperCase ? "X16" : "x16"));
 
-        internal static void WriteDacAddressLink(IConsoleService console, ulong address, int pointerSize, string command, bool dml)
+        internal static void WriteDacAddressLink(IConsoleService console, ulong address, int pointerSize, string command, bool dml, bool forceDml = false)
         {
             string value = FormatDacAddress(address, pointerSize);
-            console.WriteDmlExec(value, dml && address != 0 ? $"!{command} /d {value}" : null);
+            console.WriteDmlExec(value, dml && address != 0 ? $"!{command} /d {value}" : null, forceDml);
         }
 
         internal static unsafe string GetAssemblyName(ISOSDacInterface dac, ulong address)
@@ -139,6 +139,42 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             int terminator = buffer.IndexOf('\0');
             return (terminator >= 0 ? buffer[..terminator] : buffer).ToString();
+        }
+
+        internal static unsafe string GetObjectTypeName(ISOSDacInterface dac, ulong address, int pointerSize)
+        {
+            DacpObjectData data = default;
+            if (dac.GetObjectData(ToClrDataAddress(address, pointerSize), &data) < 0)
+            {
+                return "<error>";
+            }
+            if (data.ObjectType == DacpObjectType.OBJ_FREE)
+            {
+                return "Free";
+            }
+
+            ulong methodTable = data.MethodTable & ~(ulong)(pointerSize - 1);
+            DacpUsefulGlobalsData globals = default;
+            bool array = methodTable != 0 && data.ElementTypeHandle != 0 &&
+                dac.GetUsefulGlobals(&globals) >= 0 && methodTable == globals.ArrayMethodTable;
+            if (array)
+            {
+                methodTable = data.ElementTypeHandle;
+            }
+
+            uint needed = 0;
+            if (dac.GetMethodTableName(methodTable, 0, null, &needed) < 0 || needed == 0)
+            {
+                return "<error>";
+            }
+
+            char[] name = new char[needed];
+            fixed (char* buffer = name)
+            {
+                return dac.GetMethodTableName(methodTable, needed, buffer, null) >= 0
+                    ? ReadNullTerminatedString(name) + (array ? "[]" : "")
+                    : "<error>";
+            }
         }
     }
 }

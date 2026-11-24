@@ -66,6 +66,7 @@ public static class SosHarnessScenarios
 
     // Object-inspection oracle (known fields, struct field, and int[] field), live from the heap stop on.
     private static FieldMarker? s_fields;
+    private static ThreadStaticMarker? s_threadStatics;
 
     // Diagnostic-state oracles, live from the heap stop onward: a never-firing timer (!timerinfo), a
     // suspended async state machine + its gate (!dumpasync), and populated concurrent dictionaries (!dcd).
@@ -143,6 +144,9 @@ public static class SosHarnessScenarios
         s_concurrentQueue.Enqueue(0x222);
         s_concurrentQueue.Enqueue(0x333);
 
+        s_threadStatics = new ThreadStaticMarker();
+        ThreadStaticMarker.Number = 12345;
+        ThreadStaticMarker.Text = "thread-static-main";
         Thread fatLockHolder = new(FatLockHolder) { IsBackground = false, Name = "FatLockHolder" };
         fatLockHolder.Start();
         s_fatLockHeld.Wait();
@@ -234,6 +238,8 @@ public static class SosHarnessScenarios
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void FatLockHolder()
     {
+        ThreadStaticMarker.Number = -6789;
+        ThreadStaticMarker.Text = "thread-static-lock-holder";
         lock (s_fatLock)
         {
             s_fatLockHeld.Set();
@@ -409,6 +415,15 @@ public struct ValueMarker
 public struct ObjectReference
 {
     public object? Value;
+}
+
+public sealed class ThreadStaticMarker
+{
+    [ThreadStatic]
+    public static int Number;
+
+    [ThreadStatic]
+    public static string? Text;
 }
 
 // A reference type with known instance fields of several shapes (primitive, wide primitive, reference,

@@ -13,7 +13,6 @@ DumpDelegate
 DumpIL
 DumpMD
 DumpMT
-DumpObj
 DumpSig
 DumpSigElem
 DumpStack
