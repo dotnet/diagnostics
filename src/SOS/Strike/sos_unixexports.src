@@ -12,7 +12,6 @@ DumpClass
 DumpDelegate
 DumpIL
 DumpMD
-DumpModule
 DumpMT
 DumpObj
 DumpSig

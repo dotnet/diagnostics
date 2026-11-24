@@ -182,6 +182,13 @@ DECLARE_API(DumpDomain)
     return ExecuteManagedOnlyCommand("dumpdomain", args);
 }
 
+DECLARE_API(DumpModule)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("dumpmodule", args);
+}
+
 DECLARE_API(ThreadState)
 {
     INIT_API_NODAC();
@@ -195,13 +202,6 @@ DECLARE_API(DumpGCData)
     return ExecuteManagedOnlyCommand("dumpgcdata", args);
 }
 
-DECLARE_API(logging)
-{
-    INIT_API_EXT();
-    return ExecuteManagedOnlyCommand("logging", args);
-}
-
-DECLARE_API(maddress)
 DECLARE_API(SyncBlk)
 {
     INIT_API_EXT();
@@ -209,6 +209,13 @@ DECLARE_API(SyncBlk)
     return ExecuteManagedOnlyCommand("syncblk", args);
 }
 
+DECLARE_API(logging)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("logging", args);
+}
+
+DECLARE_API(maddress)
 {
     INIT_API_EXT();
     return ExecuteManagedOnlyCommand("maddress", args);

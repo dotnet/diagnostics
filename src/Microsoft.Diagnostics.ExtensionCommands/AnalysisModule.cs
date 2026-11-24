@@ -53,6 +53,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<DumpDomainCommand>();
             commandService.AddCommands<DumpExceptionsCommand>();
             commandService.AddCommands<DumpGcDataCommand>();
+            commandService.AddCommands<DumpModuleCommand>();
             commandService.AddCommands<DumpGenCommand>();
             commandService.AddCommands<DumpHeapCommand>();
             commandService.AddCommands<DumpHttpCommand>();
@@ -99,8 +100,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<SimulateGCHeapCorruption>();
 #endif
             commandService.AddCommands<SizeStatsCommand>();
-            commandService.AddCommands<TaskStateCommand>();
             commandService.AddCommands<SyncBlkCommand>();
+            commandService.AddCommands<TaskStateCommand>();
             commandService.AddCommands<ThreadPoolCommand>();
             commandService.AddCommands<ThreadPoolQueueCommand>();
             commandService.AddCommands<ThreadStateCommand>();

@@ -179,7 +179,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("dumpil", new sosCommand("DumpIL"), "Displays the Microsoft intermediate language (MSIL) that's associated with a managed method.");
     g_services->AddManagedCommand("dumplog", "Writes the contents of an in-memory stress log to the specified file.");
     g_services->AddCommand("dumpmd", new sosCommand("DumpMD"), "Displays information about a MethodDesc structure at the specified address.");
-    g_services->AddCommand("dumpmodule", new sosCommand("DumpModule"), "Displays information about a EE module structure at the specified address.");
+    g_services->AddManagedCommand("dumpmodule", "Displays information about a managed module.");
     g_services->AddCommand("dumpmt", new sosCommand("DumpMT"), "Displays information about a method table at the specified address.");
     g_services->AddCommand("dumpobj", new sosCommand("DumpObj"), "Displays info about an object at the specified address.");
     g_services->AddManagedCommand("dumpruntimetypes", "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.");
