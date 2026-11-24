@@ -101,6 +101,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<TaskStateCommand>();
             commandService.AddCommands<ThreadPoolCommand>();
             commandService.AddCommands<ThreadPoolQueueCommand>();
+            commandService.AddCommands<ThreadStateCommand>();
             commandService.AddCommands<TimersCommand>();
             commandService.AddCommands<Token2EECommand>();
             commandService.AddCommands<TraverseHeapCommand>();

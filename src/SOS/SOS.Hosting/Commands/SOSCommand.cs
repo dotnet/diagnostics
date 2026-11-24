@@ -35,7 +35,6 @@ namespace SOS.Hosting
     [Command(Name = "ip2md",             DefaultOptions = "IP2MD",               Help = "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.")]
     [Command(Name = "printexception",    DefaultOptions = "PrintException",      Aliases = new string[] { "pe" }, Help = "Displays and formats fields of any object derived from the Exception class at the specified address.")]
     [Command(Name = "syncblk",           DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
-    [Command(Name = "threadstate",       DefaultOptions = "ThreadState",         Help = "Pretty prints the meaning of a threads state.")]
     public class SOSCommand : SOSCommandBase
     {
         public SOSCommand(IServiceProvider services)

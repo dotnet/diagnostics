@@ -168,7 +168,15 @@ public sealed class MemoryAndDecodeTests
 
         SosOutput decoded = target.Sos($"threadstate {state.Groups[1].Value}");
         Assert.NotEmpty(decoded.Text.Trim());
-        Assert.DoesNotContain("Unrecognized", decoded.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("No thread states", decoded.Text, StringComparison.Ordinal);
+
+        SosOutput combined = target.Sos("threadstate 0x80000001");
+        Assert.Equal($"    Thread Abort Requested{Environment.NewLine}    Detached", combined.Text.TrimEnd());
+        target.Sos("threadstate 0").AssertContains("No thread states for '0'");
+        if (config.Host is Host.Cdb or Host.Lldb)
+        {
+            Assert.Equal(combined.Text, target.Sos("threadstate 0x80000000 + 1").Text);
+        }
     }
 
     [SosTheory]

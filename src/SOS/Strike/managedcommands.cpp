@@ -182,6 +182,12 @@ DECLARE_API(DumpDomain)
     return ExecuteManagedOnlyCommand("dumpdomain", args);
 }
 
+DECLARE_API(ThreadState)
+{
+    INIT_API_NODAC();
+    return ExecuteManagedOnlyCommand("threadstate", args);
+}
+
 DECLARE_API(logging)
 {
     INIT_API_EXT();

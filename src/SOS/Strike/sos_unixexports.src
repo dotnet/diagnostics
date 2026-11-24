@@ -40,7 +40,6 @@ runtimes
 SuppressJitOptimization
 SyncBlk
 Threads
-ThreadState
 u
 
 SOSInitializeByHost
