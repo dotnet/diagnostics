@@ -4278,61 +4278,6 @@ DECLARE_API(DumpDomain)
     return Status;
 }
 
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to dump the contents of a Assembly        *
-*    for a given address                                               *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(DumpAssembly)
-{
-    INIT_API();
-    MINIDUMP_NOT_SUPPORTED();
-
-    DWORD_PTR p_AssemblyAddr = 0;
-    BOOL dml = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&p_AssemblyAddr, COHEX},
-    };
-    size_t nArg;
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return E_INVALIDARG;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-
-    if (p_AssemblyAddr == 0)
-    {
-        ExtOut("Invalid Assembly %s\n", args);
-        return Status;
-    }
-
-    DacpAssemblyData Assembly;
-    if ((Status=Assembly.Request(g_sos, TO_CDADDR(p_AssemblyAddr)))!=S_OK)
-    {
-        ExtOut("Fail to fill Assembly\n");
-        return Status;
-    }
-    DMLOut("Parent Domain:      %s\n", DMLDomain(Assembly.ParentDomain));
-    if (g_sos->GetAssemblyName(TO_CDADDR(p_AssemblyAddr), mdNameLen, g_mdName, NULL)==S_OK)
-        ExtOut("Name:               %S\n", g_mdName);
-    else
-        ExtOut("Name:               Unknown\n");
-
-    AssemblyInfo(&Assembly);
-    return Status;
-}
-
-
 String GetHostingCapabilities(DWORD hostConfig)
 {
     String result;

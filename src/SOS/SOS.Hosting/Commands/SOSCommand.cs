@@ -15,7 +15,6 @@ namespace SOS.Hosting
     [Command(Name = "dbgout",            DefaultOptions = "dbgout",              Help = "Enables/disables (-off) internal SOS logging.")]
     [Command(Name = "dumpalc",           DefaultOptions = "DumpALC",             Help = "Displays details about a collectible AssemblyLoadContext into which the specified object is loaded.")]
     [Command(Name = "dumparray",         DefaultOptions = "DumpArray",           Help = "Displays details about a managed array.")]
-    [Command(Name = "dumpassembly",      DefaultOptions = "DumpAssembly",        Help = "Displays details about an assembly.")]
     [Command(Name = "dumpclass",         DefaultOptions = "DumpClass",           Help = "Displays information about a EE class structure at the specified address.")]
     [Command(Name = "dumpdelegate",      DefaultOptions = "DumpDelegate",        Help = "Displays information about a delegate.")]
     [Command(Name = "dumpdomain",        DefaultOptions = "DumpDomain",          Help = "Displays the Microsoft intermediate language (MSIL) that's associated with a managed method.")]

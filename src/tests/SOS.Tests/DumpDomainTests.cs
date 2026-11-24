@@ -86,6 +86,17 @@ public sealed class DumpDomainTests
         DumpAssemblyResult assembly = target.DumpAssembly(debuggee.Address);
         Assert.Equal(owner.Address, assembly.ParentDomain);
 
+        string? expression = config.Host switch
+        {
+            Host.Cdb => $"@$ptrsize+0x{debuggee.Address:x}-@$ptrsize",
+            Host.Lldb => $"0x{debuggee.Address:x}+0",
+            _ => null,
+        };
+        if (expression is not null)
+        {
+            Assert.Equal(assembly.Output.Text, target.Sos($"DumpAssembly /d {expression}").Text);
+        }
+
         // On-disk flavors carry the assembly's full path as its Name in both commands. Single-file bundles
         // have no on-disk assembly, so dumpdomain prints an empty path while dumpassembly prints "Unknown";
         // there the module round-trip below is the identity check instead.

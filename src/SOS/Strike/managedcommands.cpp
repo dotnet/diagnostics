@@ -168,6 +168,13 @@ DECLARE_API(DumpAsync)
     return ExecuteManagedOnlyCommand("dumpasync", args);
 }
 
+DECLARE_API(DumpAssembly)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("dumpassembly", args);
+}
+
 DECLARE_API(logging)
 {
     INIT_API_EXT();

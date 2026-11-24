@@ -46,6 +46,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<AnalyzeOOMCommand>();
             commandService.AddCommands<AssembliesCommand>();
             commandService.AddCommands<CrashInfoCommand>();
+            commandService.AddCommands<DumpAssemblyCommand>();
             commandService.AddCommands<DumpAsyncCommand>();
             commandService.AddCommands<DumpConcurrentDictionaryCommand>();
             commandService.AddCommands<DumpConcurrentQueueCommand>();
