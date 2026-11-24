@@ -74,9 +74,10 @@ public sealed class SpecializedInspectionTests
         // The contended s_fatLock is inflated, so syncblk lists a held sync block (MonitorHeld > 0).
         SosOutput sync = target.Sos("syncblk");
         sync.AssertContains("MonitorHeld");
-        Assert.True(
-            Regex.IsMatch(sync.Text, @"^\s*\d+\s+[0-9a-fA-F`]+\s+[1-9]\d*\s+\d+\s+", RegexOptions.Multiline),
-            $"expected a held sync block:\n{sync.Text}");
+        Match held = Regex.Match(sync.Text, @"(?m)^ *(?<index>\d+) +[0-9a-fA-F`]+ +[1-9]\d* +\d+ +[^\r\n]+");
+        Assert.True(held.Success, $"expected a held sync block:\n{sync.Text}");
+        target.Sos($"syncblk {held.Groups["index"].Value}").AssertContains(held.Value);
+        target.Sos("syncblk -all").AssertContains(held.Value);
     }
 
     [SosTheory]

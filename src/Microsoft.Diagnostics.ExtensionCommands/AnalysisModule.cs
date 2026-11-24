@@ -100,6 +100,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 #endif
             commandService.AddCommands<SizeStatsCommand>();
             commandService.AddCommands<TaskStateCommand>();
+            commandService.AddCommands<SyncBlkCommand>();
             commandService.AddCommands<ThreadPoolCommand>();
             commandService.AddCommands<ThreadPoolQueueCommand>();
             commandService.AddCommands<ThreadStateCommand>();

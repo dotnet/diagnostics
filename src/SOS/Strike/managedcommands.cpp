@@ -202,6 +202,13 @@ DECLARE_API(logging)
 }
 
 DECLARE_API(maddress)
+DECLARE_API(SyncBlk)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("syncblk", args);
+}
+
 {
     INIT_API_EXT();
     return ExecuteManagedOnlyCommand("maddress", args);

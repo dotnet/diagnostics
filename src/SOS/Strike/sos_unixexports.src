@@ -37,7 +37,6 @@ SOSStatus
 SOSFlush
 runtimes
 SuppressJitOptimization
-SyncBlk
 Threads
 u
 
