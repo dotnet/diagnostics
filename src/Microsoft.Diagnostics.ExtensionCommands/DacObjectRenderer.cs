@@ -30,22 +30,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         internal unsafe void WriteObject(ulong address, bool printFields, HostType hostType)
         {
             ulong dacAddress = ToClrDataAddress(address, memory.PointerSize);
-            DacpObjectData data = default;
-            int hr = dac.GetObjectData(dacAddress, &data);
-            string name = hr >= 0 && data.ObjectType != DacpObjectType.OBJ_FREE ? GetObjectTypeName(dac, address, memory.PointerSize) : null;
-            if (hr < 0 || (data.ObjectType != DacpObjectType.OBJ_FREE && name != "<Unloaded Type>" && !HasValidMethodTables(data.MethodTable)))
-            {
-                WriteInvalidClassWarning(hostType);
-            }
-            if (hr != 0)
-            {
-                throw new DiagnosticsException(hostType == HostType.DotnetDump ? "Invalid object\n" : "Invalid object");
-            }
-
+            DacpObjectData data = ReadObject(address, hostType, warnOnInvalidGc: true, out string name);
             if (data.ObjectType == DacpObjectType.OBJ_FREE)
             {
-                console.WriteLine("Free Object");
-                WriteSize(data.Size);
+                WriteFreeObject(data.Size);
                 return;
             }
 
@@ -65,6 +53,32 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             WriteThinLock(address);
+        }
+
+        internal unsafe DacpObjectData ReadObject(ulong address, HostType hostType, bool warnOnInvalidGc, out string name)
+        {
+            DacpObjectData data = default;
+            int hr = dac.GetObjectData(ToClrDataAddress(address, memory.PointerSize), &data);
+            name = hr >= 0 && data.ObjectType != DacpObjectType.OBJ_FREE ? GetObjectTypeName(dac, address, memory.PointerSize) : null;
+            if (hr < 0 || (data.ObjectType != DacpObjectType.OBJ_FREE && name != "<Unloaded Type>" && !HasValidMethodTables(data.MethodTable)))
+            {
+                console.WriteLine("<Note: this object has an invalid CLASS field>");
+                if (warnOnInvalidGc)
+                {
+                    WriteInvalidGcWarning(hostType);
+                }
+            }
+            if (hr != 0)
+            {
+                throw new DiagnosticsException(hostType == HostType.DotnetDump ? "Invalid object\n" : "Invalid object");
+            }
+            return data;
+        }
+
+        internal void WriteFreeObject(ulong size)
+        {
+            console.WriteLine("Free Object");
+            WriteSize(size);
         }
 
         private unsafe bool HasValidMethodTables(ulong methodTable)
@@ -87,9 +101,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return true;
         }
 
-        private unsafe void WriteInvalidClassWarning(HostType hostType)
+        private unsafe void WriteInvalidGcWarning(HostType hostType)
         {
-            console.WriteLine("<Note: this object has an invalid CLASS field>");
             DacpGcHeapData heap = default;
             int hr = dac.GetGCHeapData(&heap);
             if (hr != 0)

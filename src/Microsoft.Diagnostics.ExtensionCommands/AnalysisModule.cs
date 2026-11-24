@@ -60,6 +60,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<DumpLogCommand>();
             commandService.AddCommands<DumpObjGCRefsCommand>();
             commandService.AddCommands<DumpObjCommand>();
+            commandService.AddCommands<DumpAlcCommand>();
             commandService.AddCommands<DumpRequestsCommand>();
             commandService.AddCommands<DumpRuntimeTypeCommand>();
             commandService.AddCommands<DumpStackObjectsCommand>();

@@ -4,7 +4,6 @@
 using System;
 using Microsoft.Diagnostics.DebugServices;
 using SOS.Hosting;
-using SOS.Hosting.DbgEng.Interop;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -25,10 +24,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            if (IsMinidumpSafeMode())
+            if (WarnIfMinidumpSafeMode())
             {
-                Console.WriteLine("This command is not supported in a minidump without full memory");
-                Console.WriteLine("To try the command anyway, run !MinidumpMode 0");
                 return;
             }
 
@@ -37,24 +34,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 throw new DiagnosticsException($"Invalid parameter {Address}{(target.Host.HostType == HostType.DotnetDump ? "\n" : "")}");
             }
 
-            bool dml = target.Host.HostType == HostType.DbgEng && (DmlEnabled || Console.SupportsDml);
+            bool dml = UseDml(target.Host.HostType, DmlEnabled);
             new DacObjectRenderer(Dac, Console, memory, modules, target.OperatingSystem, dml).WriteObject(address, !NoFields, target.Host.HostType);
             if (References)
             {
                 new DumpObjGCRefsCommand(Services).WriteReferences(address);
             }
-        }
-
-        private bool IsMinidumpSafeMode()
-        {
-            INativeDebuggerDumpService settings = Services.GetService<INativeDebuggerDumpService>();
-            INativeDebugControl2 control = Services.GetService<INativeDebugControl2>();
-            return settings?.IsMinidumpSafeModeEnabled() == 0 &&
-                control is not null &&
-                control.GetDebuggeeType(out _, out DEBUG_CLASS_QUALIFIER qualifier) >= 0 &&
-                qualifier == DEBUG_CLASS_QUALIFIER.USER_WINDOWS_SMALL_DUMP &&
-                control.GetDumpFormatFlags(out DEBUG_FORMAT flags) >= 0 &&
-                (flags & DEBUG_FORMAT.USER_SMALL_FULL_MEMORY) == 0;
         }
     }
 }

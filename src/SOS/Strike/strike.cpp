@@ -1703,50 +1703,6 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     return S_OK;
 }
 
-HRESULT PrintALC(TADDR taObj)
-{
-    if (!sos::IsObject(taObj, true))
-    {
-        ExtOut("<Note: this object has an invalid CLASS field>\n");
-    }
-
-    DacpObjectData objData;
-    HRESULT Status;
-    if ((Status=objData.Request(g_sos, TO_CDADDR(taObj))) != S_OK)
-    {
-        ExtOut("Invalid object\n");
-        return Status;
-    }
-
-    if (objData.ObjectType==OBJ_FREE)
-    {
-        ExtOut("Free Object\n");
-        DWORD_PTR size = (DWORD_PTR)objData.Size;
-        ExtOut("Size:        %" POINTERSIZE_TYPE "d(0x%" POINTERSIZE_TYPE "x) bytes\n", size, size);
-        return S_OK;
-    }
-
-    CLRDATA_ADDRESS assemblyLoadContext = 0;
-    ReleaseHolder<ISOSDacInterface8> sos8;
-    if (SUCCEEDED(Status = g_sos->QueryInterface(__uuidof(ISOSDacInterface8), &sos8)))
-    {
-        Status = sos8->GetAssemblyLoadContext(objData.MethodTable, &assemblyLoadContext);
-        if (FAILED(Status))
-        {
-            ExtOut("Failed to get the AssemblyLoadContext\n");
-            return Status;
-        }
-    }
-
-    if (assemblyLoadContext == 0)
-    {
-        ExtOut("Name:        System.Runtime.Loader.DefaultAssemblyLoadContext\n");
-        ExtOut("The managed instance of this context doesn't exist yet\n");
-        return S_OK;
-    }
-
-    return PrintObj(TO_TADDR(assemblyLoadContext));
-}
 
 BOOL IndicesInRange (DWORD * indices, DWORD * lowerBounds, DWORD * bounds, DWORD rank)
 {
@@ -2121,57 +2077,6 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
 *    given address
 *                                                                      *
 \**********************************************************************/
-DECLARE_API(DumpALC)
-{
-    INIT_API();
-
-    MINIDUMP_NOT_SUPPORTED();
-
-    BOOL dml = FALSE;
-    StringHolder str_Object;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&str_Object.data, COSTRING}
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return E_INVALIDARG;
-    }
-
-    DWORD_PTR p_Object = GetExpression(str_Object.data);
-    EnableDMLHolder dmlHolder(dml);
-    if (p_Object == 0)
-    {
-        ExtOut("Invalid parameter %s\n", args);
-        return E_INVALIDARG;
-    }
-
-    try
-    {
-        Status = PrintALC(p_Object);
-    }
-    catch(const sos::Exception &e)
-    {
-        ExtOut("%s\n", e.what());
-        return E_FAIL;
-    }
-
-    return Status;
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to dump the contents of a delegate from a *
-*    given address.                                                    *
-*                                                                      *
-\**********************************************************************/
-
 DECLARE_API(DumpDelegate)
 {
     INIT_API_PROBE_MANAGED("dumpdelegate");
