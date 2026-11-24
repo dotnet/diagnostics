@@ -14,6 +14,6 @@
     "Microsoft.Build.NoTargets": "3.7.0",
     "Microsoft.Build.Traversal": "3.4.0",
     "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.26573.2",
-    "Microsoft.DotNet.Helix.Sdk": "10.0.0-beta.26431.5"
+    "Microsoft.DotNet.Helix.Sdk": "10.0.0-beta.26573.2"
   }
 }
