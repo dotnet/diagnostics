@@ -15,6 +15,7 @@ using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting;
 using SOS.Hosting.DbgEng.Interop;
+using SOS.Hosting.Interop;
 
 namespace SOS.Extensions
 {
@@ -259,6 +260,9 @@ namespace SOS.Extensions
                 // Add all the global services to the global service container
                 serviceContainer.AddService<SOSLibrary.ISOSModule>(this);
                 serviceContainer.AddService<SOSHost.INativeDebugger>(DebuggerServices);
+                DebuggerComService<INativeDebuggerExpressionService>.Register(serviceContainer, iunk);
+                DebuggerComService<INativeDebuggerDumpService>.Register(serviceContainer, iunk);
+                DebuggerComService<INativeDebugControl2>.Register(serviceContainer, iunk);
                 serviceContainer.AddService<ICommandService>(_commandService);
                 serviceContainer.AddService<ISymbolService>(_symbolService);
                 serviceContainer.AddService<IConsoleService>(fileLoggingConsoleService);

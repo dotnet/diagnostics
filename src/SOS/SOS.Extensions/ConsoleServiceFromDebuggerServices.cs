@@ -12,7 +12,6 @@ namespace SOS.Extensions
     internal sealed class ConsoleServiceFromDebuggerServices : IConsoleService
     {
         private readonly DebuggerServices _debuggerServices;
-        private bool? _supportsDml;
 
         public ConsoleServiceFromDebuggerServices(DebuggerServices debuggerServices)
         {
@@ -21,7 +20,7 @@ namespace SOS.Extensions
 
         #region IConsoleService
 
-        public bool SupportsDml => _supportsDml ??= _debuggerServices.SupportsDml;
+        public bool SupportsDml => _debuggerServices.SupportsDml;
 
         public CancellationToken CancellationToken { get; set; }
 

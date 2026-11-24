@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
@@ -13,6 +14,7 @@ using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats.ELF;
 using SOS.Hosting.DbgEng.Interop;
+using Microsoft.Diagnostics.DataContractReader.Legacy;
 
 namespace SOS.Hosting
 {
@@ -82,6 +84,8 @@ namespace SOS.Hosting
         private readonly IServiceProvider _services;
         private readonly IRuntime _runtime;
         private IntPtr _clrDataProcess = IntPtr.Zero;
+        private IntPtr _managedDacProcess;
+        private IXCLRDataProcess _managedDac;
         private IntPtr _corDebugProcess = IntPtr.Zero;
         private IntPtr _dacHandle = IntPtr.Zero;
         private IntPtr _dbiHandle = IntPtr.Zero;
@@ -117,6 +121,7 @@ namespace SOS.Hosting
         void IDisposable.Dispose()
         {
             Trace.TraceInformation("RuntimeWrapper.Dispose");
+            ReleaseManagedDac();
             this.ReleaseWithCheck();
         }
 
@@ -284,6 +289,41 @@ namespace SOS.Hosting
         private CDacLoadPolicy GetCDacLoadPolicy(IntPtr self)
         {
             return _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac;
+        }
+
+        /// <summary>
+        /// Gets the selected SOS DAC interface. The wrapper owns the proxy and can release it on a DAC switch or disposal.
+        /// </summary>
+        public int GetSosDac(out ISOSDacInterface dac)
+        {
+            dac = null;
+            IntPtr process;
+            int hr = GetClrDataProcess(IRuntime, GetCDacLoadPolicy(IRuntime), &process);
+            if (hr < 0 || process == IntPtr.Zero)
+            {
+                return hr < 0 ? hr : HResult.E_NOINTERFACE;
+            }
+
+            if (process != _managedDacProcess)
+            {
+                // Target flushes recreate the runtime scope and its DAC; wrapping a DAC does not invalidate its cache.
+                ReleaseManagedDac();
+                _managedDac = UniqueComInterfaceMarshaller<IXCLRDataProcess>.ConvertToManaged((void*)process);
+                _managedDacProcess = process;
+            }
+
+            dac = _managedDac as ISOSDacInterface;
+            return dac != null ? HResult.S_OK : HResult.E_NOINTERFACE;
+        }
+
+        private void ReleaseManagedDac()
+        {
+            if ((object)_managedDac is ComObject proxy)
+            {
+                ComWrapper.FinalReleaseUniqueProxy(proxy);
+            }
+            _managedDac = null;
+            _managedDacProcess = IntPtr.Zero;
         }
 
         private int GetCorDebugInterface(

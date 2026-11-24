@@ -89,6 +89,12 @@ LLDBServices::QueryInterface(
         AddRef();
         return S_OK;
     }
+    else if (InterfaceId == __uuidof(IDebuggerExpressionService))
+    {
+        *Interface = static_cast<IDebuggerExpressionService*>(this);
+        AddRef();
+        return S_OK;
+    }
     else
     {
         *Interface = NULL;
@@ -148,15 +154,24 @@ ULONG64
 LLDBServices::GetExpression(
     PCSTR exp)
 {
+    ULONG64 value = 0;
+    EvaluateExpression(exp, &value);
+    return value;
+}
+
+HRESULT STDMETHODCALLTYPE
+LLDBServices::EvaluateExpression(PCSTR exp, PULONG64 value)
+{
+    *value = 0;
     if (exp == nullptr)
     {
-        return 0;
+        return E_INVALIDARG;
     }
 
     lldb::SBFrame frame = GetCurrentFrame();
     if (!frame.IsValid())
     {
-        return 0;
+        return E_FAIL;
     }
 
     ULONG64 result = 0;
@@ -176,7 +191,10 @@ LLDBServices::GetExpression(
         result = GetExpression(frame, error, exp);
     }
 
-    return result;
+    if (error.Fail())
+        return E_FAIL;
+    *value = result;
+    return S_OK;
 }
 
 // Internal function
@@ -189,9 +207,14 @@ LLDBServices::GetExpression(
     ULONG64 result = 0;
 
     lldb::SBValue value = frame.EvaluateExpression(exp, lldb::eNoDynamicValues);
+    error = value.GetError();
     if (value.IsValid())
     {
         result = value.GetValueAsUnsigned(error);
+    }
+    else if (error.Success())
+    {
+        error.SetErrorString("Invalid expression result");
     }
 
     return result;
