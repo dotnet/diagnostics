@@ -17,33 +17,20 @@ Frequently Asked Questions
 
     and then re-run command with the issue.
 
-* On macOS, SOS defaults `PAL_MachExceptionMode` to `7` before starting its managed
-  hosting runtime so CoreCLR does not replace LLDB's guarded Mach exception ports.
-  An existing value is preserved. If LLDB is killed when SOS starts, remove any
-  explicit value other than `7`.
+* On macOS, debugger-hosted SOS defaults `PAL_MachExceptionMode` to `7` before
+  loading its NativeAOT extension library so the embedded runtime does not replace
+  LLDB's guarded Mach exception ports. An existing value is preserved. If LLDB is
+  killed when SOS starts, remove any explicit value other than `7`.
 
-  When probing for a hosting runtime, SOS prefers .NET 11 over .NET 10 because
-  .NET 10 can fail in `coreclr_initialize` with `0x8007000C` under Apple LLDB.
-  The .NET 11 [CoreCLR hosting fix](https://github.com/dotnet/runtime/pull/132925)
-  resolves that failure. Use `sethostruntime <directory>` to select a specific runtime.
+  This applies to SOS loaded by native debuggers such as LLDB. `dotnet-dump analyze`
+  hosts the managed SOS implementation directly in its .NET 8+ process and does not
+  load the NativeAOT extension library.
 
 * On MacOS if you see any of the following errors:
     ```
     (lldb) plugin load libsosplugin.so
     error: this file does not represent a loadable dylib
     ```
-    or if the sos plugin loads correctly but you see this error on any command:
-    ```
-    (lldb) setsymbolserver -ms
-    Error: Fail to initialize coreclr 80070008
-    ```
-    or something like this error:
-    ```
-    (lldb) setsymbolserver -ms
-    SOS_HOSTING: Fail to initialize hosting runtime '/usr/local/share/dotnet/shared/Microsoft.NETCore.App/6.0.29/libcoreclr.dylib' 80004005
-    Unrecognized command 'setsymbolserver' because managed hosting failed or was disabled. See sethostruntime command for details.
-    ```
-
     Try the following workaround for Apple's standard lldb installation:
     ```
     $ sudo cp /Applications/Xcode.app/Contents/Developer/usr/bin/lldb /usr/local/bin

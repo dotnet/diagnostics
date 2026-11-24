@@ -5,7 +5,6 @@
     <ClCompile Include="setsostidcommand.cpp" />
     <ClCompile Include="soscommand.cpp" />
     <ClCompile Include="sosplugin.cpp" />
-    <ClCompile Include="sethostruntimecommand.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="mstypes.h" />

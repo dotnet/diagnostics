@@ -37,11 +37,6 @@ namespace SOS
         public string SOSNativeSourcePath { get; set; }
 
         /// <summary>
-        /// The managed binaries source path from which SOS is installed. Default is "lib" under that same directory as this assembly.
-        /// </summary>
-        public string SOSManagedSourcePath { get; set; }
-
-        /// <summary>
         /// Console output delegate
         /// </summary>
         private readonly Action<string> m_writeLine;
@@ -64,7 +59,6 @@ namespace SOS
             InstallLocation = Path.GetFullPath(Path.Combine(home, ".dotnet", "sos"));
 
             SOSNativeSourcePath = SOSPackageLayout.GetNativeBinariesDirectory(architecture);
-            SOSManagedSourcePath = SOSPackageLayout.GetManagedBinariesDirectory();
         }
 
         /// <summary>
@@ -75,17 +69,13 @@ namespace SOS
         {
             WriteLine("Installing SOS to {0}", InstallLocation);
 
-            if (string.IsNullOrEmpty(SOSNativeSourcePath) || string.IsNullOrEmpty(SOSManagedSourcePath))
+            if (string.IsNullOrEmpty(SOSNativeSourcePath))
             {
                 throw new SOSInstallerException("SOS source path not valid");
             }
             if (!Directory.Exists(SOSNativeSourcePath))
             {
                 throw new SOSInstallerException($"Operating system or architecture not supported: installing from {SOSNativeSourcePath}");
-            }
-            if (!Directory.Exists(SOSManagedSourcePath))
-            {
-                throw new SOSInstallerException($"Invalid SOS source directory {SOSManagedSourcePath}");
             }
             if (string.IsNullOrEmpty(InstallLocation))
             {
@@ -111,10 +101,6 @@ namespace SOS
                 // Copy native SOS files
                 WriteLine($"Copying files from {SOSNativeSourcePath}");
                 RetryOperation("Problem installing native SOS binaries", () => CopyFiles(SOSNativeSourcePath, InstallLocation));
-
-                // Copy managed SOS files
-                WriteLine($"Copying files from {SOSManagedSourcePath}");
-                RetryOperation("Problem installing managed SOS binaries", () => CopyFiles(SOSManagedSourcePath, InstallLocation));
 
                 // Configure lldb
                 if (LLDBInitFile != null)

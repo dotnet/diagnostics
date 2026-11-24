@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(SOSNativeAotTargetFramework)</TargetFramework>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(TargetRid)</RuntimeIdentifier>
+    <CrossBuild Condition="'$(CrossBuild)' == '' and '$(CROSSCOMPILE)' == '1'">true</CrossBuild>
+    <AssemblyName>SOS.Extensions.NativeAot</AssemblyName>
+    <RootNamespace>SOS.Extensions.NativeAot</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <NativeLib>Shared</NativeLib>
+    <UseNativeAotForComponents>true</UseNativeAotForComponents>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Do not propagate RuntimeIdentifier to managed dependencies; duplicate graph nodes would race writing the same non-RID build outputs. -->
+    <ProjectReference Include="..\SOS.Extensions\SOS.Extensions.csproj" GlobalPropertiesToRemove="RuntimeIdentifier" />
+  </ItemGroup>
+
+  <Import Project="$(RepoRoot)src\cdac\toolAot.targets" />
+
+  <Target Name="InstallNativeAotLibrary" AfterTargets="Publish">
+    <ItemGroup>
+      <NativeAotBinaries Include="$(PublishDir)SOS.Extensions.NativeAot.*" />
+    </ItemGroup>
+    <Error Condition="'@(NativeAotBinaries)' == ''" Text="NativeAOT did not produce the SOS extension in $(PublishDir)." />
+    <Copy SourceFiles="@(NativeAotBinaries)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false" />
+  </Target>
+</Project>

@@ -80,17 +80,14 @@
     <Option Condition="'$(RuntimeVersionLatest)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
       <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
-      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
     <Option Condition="'$(RuntimeVersionServicing1)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
       <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
-      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
     <Option Condition="'$(RuntimeVersionServicing2)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
       <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
-      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
     <Option Condition="'$(RuntimeVersionServicing3)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>

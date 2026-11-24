@@ -147,8 +147,6 @@ EXPORTS
     savemodule=SaveModule
     SaveAllModules
     saveallmodules=SaveAllModules
-    SetHostRuntime
-    sethostruntime=SetHostRuntime
     SetSymbolServer
     setsymbolserver=SetSymbolServer
     SetClrPath

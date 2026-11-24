@@ -7,10 +7,6 @@
                                   or a linux-x64-only one on Linux) so packing is testable
                                   on any host without requiring a full cross-rid build.
         PackageWithCDac         - when 'true', include the cDAC native binary alongside SOS.
-        RequireSOSExtensionsBinaries
-                                - when 'true', require the managed SOS.Extensions payloads
-                                  needed by debugger-hosted SOS packages.
-
     Every `SosRequiredBinaries Include="..."` entry refers to a build output that is
     expected to exist for the rids in scope: missing native artifacts are intentionally a
     pack error, not a silent skip. To pack a subset locally, set
@@ -21,23 +17,13 @@
     <IsMuslBuild Condition="$(TargetRid.StartsWith('linux-musl-'))">true</IsMuslBuild>
   </PropertyGroup>
 
-  <ItemGroup>
-    <SOSExtensionsBinaries Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(DesktopTargetFramework)\publish\*.dll"
-                           TargetFramework="$(DesktopTargetFramework)" />
-    <SOSExtensionsBinaries Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(NetCoreAppMinTargetFramework)\publish\*.dll"
-                           TargetFramework="$(NetCoreAppMinTargetFramework)" />
+  <ItemGroup Condition="'$(PackAsTool)' == 'true'">
+    <ProjectReference Include="$(RepoRoot)src\SOS\SOS.Extensions.NativeAot\SOS.Extensions.NativeAot.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true"
+                      GlobalPropertiesToRemove="TargetFramework"
+                      Targets="Publish" />
   </ItemGroup>
-
-  <Target Name="ValidateSOSExtensionsBinaries"
-          BeforeTargets="GenerateNuspec"
-          Condition="'$(RequireSOSExtensionsBinaries)' == 'true'">
-    <Error Condition="'@(SOSExtensionsBinaries->WithMetadataValue('TargetFramework', '$(DesktopTargetFramework)'))' == ''"
-           Text="The $(DesktopTargetFramework) SOS managed payload was not found. Build SOS.Extensions for $(Configuration) before packing." />
-    <Error Condition="!Exists('$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(DesktopTargetFramework)\publish\SOS.FrameworkHost.dll')"
-           Text="The SOS Framework bootstrap was not found. Build SOS.Extensions for $(Configuration) before packing." />
-    <Error Condition="'@(SOSExtensionsBinaries->WithMetadataValue('TargetFramework', '$(NetCoreAppMinTargetFramework)'))' == ''"
-           Text="The $(NetCoreAppMinTargetFramework) SOS managed payload was not found. Build SOS.Extensions for $(Configuration) before packing." />
-  </Target>
 
   <!-- Each RID's required binaries are grouped in an ItemGroup guarded by SingleTargetRidPackage:
        when 'true' only the current $(TargetRid) is packed (a locally buildable single-rid package),
@@ -45,6 +31,7 @@
        error. The cDAC entries are additionally guarded by PackageWithCDac. -->
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'win-x64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll" TargetRid="win-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\SOS.Extensions.NativeAot.dll" TargetRid="win-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll" TargetRid="win-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\dbgshim.dll" TargetRid="win-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x64" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -53,6 +40,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'win-x86'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll" TargetRid="win-x86" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\SOS.Extensions.NativeAot.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\dbgshim.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x86" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -61,6 +49,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'win-arm64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\sos.dll" TargetRid="win-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\SOS.Extensions.NativeAot.dll" TargetRid="win-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll" TargetRid="win-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\dbgshim.dll" TargetRid="win-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -69,6 +58,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-x64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\SOS.Extensions.NativeAot.so" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libsos.so" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libdbgshim.so" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-x64" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -78,6 +68,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-musl-x64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-x64" TargetsMusl="true" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\SOS.Extensions.NativeAot.so" TargetRid="linux-musl-x64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libsos.so" TargetRid="linux-musl-x64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libdbgshim.so" TargetRid="linux-musl-x64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-musl-x64" TargetsMusl="true" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -87,6 +78,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-arm'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-arm" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\SOS.Extensions.NativeAot.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libsos.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libdbgshim.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-arm" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -96,6 +88,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-arm64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\SOS.Extensions.NativeAot.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libsos.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libdbgshim.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -105,6 +98,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-musl-arm64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm64" TargetsMusl="true" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\SOS.Extensions.NativeAot.so" TargetRid="linux-musl-arm64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsos.so" TargetRid="linux-musl-arm64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libdbgshim.so" TargetRid="linux-musl-arm64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-musl-arm64" TargetsMusl="true" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -114,6 +108,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-musl-arm'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm" TargetsMusl="true" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\SOS.Extensions.NativeAot.so" TargetRid="linux-musl-arm" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libsos.so" TargetRid="linux-musl-arm" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libdbgshim.so" TargetRid="linux-musl-arm" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-musl-arm" TargetsMusl="true" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -123,6 +118,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'osx-x64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\SOS.Extensions.NativeAot.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libsos.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libdbgshim.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-x64" Condition="'$(PackageWithCDac)' == 'true'" />
@@ -132,6 +128,7 @@
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'osx-arm64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\SOS.Extensions.NativeAot.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libsos.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libdbgshim.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-arm64" Condition="'$(PackageWithCDac)' == 'true'" />

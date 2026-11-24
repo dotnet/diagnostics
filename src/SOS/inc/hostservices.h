@@ -7,20 +7,7 @@
 #include <unknwn.h>
 #include <palclr.h>
 
-static const char*  ExtensionsDllName = "SOS.Extensions";
-static const WCHAR* ExtensionsDllNameW = W("SOS.Extensions.dll");
-static const WCHAR* ExtensionsDesktopHostDllNameW = W("SOS.FrameworkHost.dll");
-static const WCHAR* ExtensionsDesktopHostClassNameW = W("SOS.FrameworkHost.Host");
-// These package subdirectories must match DesktopTargetFramework and NetCoreAppMinTargetFramework
-// in Directory.Build.props because the native hosts probe the paths directly.
-static const char*  ExtensionsNetCoreSubdirectory = "net8.0";
-static const WCHAR* ExtensionsDesktopSubdirectoryW = W("net462");
-static const char*  ExtensionsClassName = "SOS.Extensions.HostServices";
-static const WCHAR* ExtensionsClassNameW = W("SOS.Extensions.HostServices");
-static const char*  ExtensionsInitializeFunctionName = "Initialize";
-static const WCHAR* ExtensionsInitializeFunctionNameW = W("Initialize");
-
-typedef HRESULT (*ExtensionsInitializeDelegate)(PCSTR extensionPath);
+typedef HRESULT (__cdecl *ExtensionsInitializeDelegate)(PCSTR sosNativePath);
 
 #ifdef __cplusplus
 extern "C" {

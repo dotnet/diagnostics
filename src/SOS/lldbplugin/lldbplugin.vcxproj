@@ -58,7 +58,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="services.cpp" />
-    <ClCompile Include="sethostruntimecommand.cpp" />
     <ClCompile Include="setsostidcommand.cpp" />
     <ClCompile Include="soscommand.cpp" />
     <ClCompile Include="sosplugin.cpp" />
