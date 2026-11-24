@@ -52,6 +52,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<DumpConcurrentQueueCommand>();
             commandService.AddCommands<DumpDomainCommand>();
             commandService.AddCommands<DumpExceptionsCommand>();
+            commandService.AddCommands<DumpGcDataCommand>();
             commandService.AddCommands<DumpGenCommand>();
             commandService.AddCommands<DumpHeapCommand>();
             commandService.AddCommands<DumpHttpCommand>();

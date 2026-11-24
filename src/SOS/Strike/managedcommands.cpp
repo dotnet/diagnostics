@@ -188,6 +188,13 @@ DECLARE_API(ThreadState)
     return ExecuteManagedOnlyCommand("threadstate", args);
 }
 
+DECLARE_API(DumpGCData)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("dumpgcdata", args);
+}
+
 DECLARE_API(logging)
 {
     INIT_API_EXT();

@@ -17,7 +17,6 @@ namespace SOS.Hosting
     [Command(Name = "dumparray",         DefaultOptions = "DumpArray",           Help = "Displays details about a managed array.")]
     [Command(Name = "dumpclass",         DefaultOptions = "DumpClass",           Help = "Displays information about a EE class structure at the specified address.")]
     [Command(Name = "dumpdelegate",      DefaultOptions = "DumpDelegate",        Help = "Displays information about a delegate.")]
-    [Command(Name = "dumpgcdata",        DefaultOptions = "DumpGCData",          Help = "Displays information about the GC data.")]
     [Command(Name = "dumpil",            DefaultOptions = "DumpIL",              Help = "Displays the Microsoft intermediate language (MSIL) that is associated with a managed method.")]
     [Command(Name = "dumpmd",            DefaultOptions = "DumpMD",              Help = "Displays information about a MethodDesc structure at the specified address.")]
     [Command(Name = "dumpmodule",        DefaultOptions = "DumpModule",          Help = "Displays information about a EE module structure at the specified address.")]
