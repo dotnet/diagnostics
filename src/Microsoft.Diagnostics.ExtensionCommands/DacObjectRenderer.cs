@@ -618,15 +618,38 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             WriteAddress("Type MT:     ", handle, "DumpMT");
         }
 
-        private unsafe bool TryReadInstancePointer(ulong address, ulong methodTable, string name, out ulong value)
+        internal bool TryReadInstancePointer(ulong address, ulong methodTable, string name, out ulong value, bool searchParents = false)
         {
             value = 0;
+            return TryGetInstanceFieldAddress(address, methodTable, name, out ulong field, searchParents) && memory.ReadPointer(field, out value);
+        }
+
+        internal bool TryGetInstanceFieldAddress(ulong address, ulong methodTable, string name, out ulong field, bool searchParents)
+        {
+            HashSet<ulong> visited = searchParents ? new() : null;
+            while (methodTable != 0 && (visited is null || visited.Add(methodTable)))
+            {
+                if (TryGetDeclaredInstanceFieldAddress(address, methodTable, name, out field, out ulong parent))
+                {
+                    return true;
+                }
+                methodTable = searchParents ? parent : 0;
+            }
+            field = 0;
+            return false;
+        }
+
+        private unsafe bool TryGetDeclaredInstanceFieldAddress(ulong address, ulong methodTable, string name, out ulong value, out ulong parentMethodTable)
+        {
+            value = 0;
+            parentMethodTable = 0;
             DacpMethodTableData type = default;
             DacpMethodTableFieldData fields = default;
             if (dac.GetMethodTableData(methodTable, &type) != 0 || dac.GetMethodTableFieldData(methodTable, &fields) != 0)
             {
                 return false;
             }
+            parentMethodTable = type.parentMethodTable;
             DacpMethodTableFieldData parent = default;
             if (type.parentMethodTable != 0 && dac.GetMethodTableFieldData(type.parentMethodTable, &parent) != 0)
             {
@@ -651,7 +674,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 if (field.bIsStatic == 0 && row > 0 && row <= reader.FieldDefinitions.Count &&
                     reader.StringComparer.Equals(reader.GetFieldDefinition(MetadataTokens.FieldDefinitionHandle(row)).Name, name))
                 {
-                    return memory.ReadPointer(address + (uint)memory.PointerSize + field.dwOffset, out value);
+                    value = address + (uint)memory.PointerSize + field.dwOffset;
+                    return true;
                 }
                 fieldAddress = field.NextField;
             }

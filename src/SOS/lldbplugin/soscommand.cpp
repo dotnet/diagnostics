@@ -170,7 +170,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddManagedCommand("dumpasync", "Displays information about async \"stacks\" on the garbage-collected heap.");
     g_services->AddManagedCommand("dumpassembly", "Displays details about an assembly.");
     g_services->AddManagedCommand("dumpclass", "Displays information about a EE class structure at the specified address.");
-    g_services->AddCommand("dumpdelegate", new sosCommand("DumpDelegate"), "Displays information about a delegate.");
+    g_services->AddManagedCommand("dumpdelegate", "Displays information about a delegate.");
     g_services->AddManagedCommand("dumpdomain", "Displays assemblies in all AppDomains or in the specified AppDomain.");
     g_services->AddManagedCommand("dumpgcdata", "Displays information about the GC data.");
     g_services->AddManagedCommand("dumpheap", "Displays info about the garbage-collected heap and collection statistics about objects.");

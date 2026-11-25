@@ -6,7 +6,6 @@ bpmd
 clrma
 ClrStack
 dbgout
-DumpDelegate
 DumpIL
 DumpMD
 DumpSig

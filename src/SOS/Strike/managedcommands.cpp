@@ -213,6 +213,12 @@ DECLARE_API(DumpClass)
     return ExecuteManagedOnlyCommand("dumpclass", args);
 }
 
+DECLARE_API(DumpDelegate)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumpdelegate", args);
+}
+
 DECLARE_API(DumpMT)
 {
     INIT_API_EXT();

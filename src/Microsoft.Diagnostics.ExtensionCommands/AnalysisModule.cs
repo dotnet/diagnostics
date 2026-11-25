@@ -64,6 +64,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<DumpVcCommand>();
             commandService.AddCommands<DumpArrayCommand>();
             commandService.AddCommands<DumpClassCommand>();
+            commandService.AddCommands<DumpDelegateCommand>();
             commandService.AddCommands<DumpMtCommand>();
             commandService.AddCommands<DumpRequestsCommand>();
             commandService.AddCommands<DumpRuntimeTypeCommand>();
