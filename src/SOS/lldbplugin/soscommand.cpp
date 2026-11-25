@@ -166,7 +166,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddManagedCommand("crashinfo", "Displays the Native AOT crash info.");
     g_services->AddCommand("dbgout", new sosCommand("dbgout"), "Enables/disables (-off) internal SOS logging.");
     g_services->AddManagedCommand("dumpalc", "Displays details about a collectible AssemblyLoadContext to which the specified object is loaded.");
-    g_services->AddCommand("dumparray", new sosCommand("DumpArray"), "Displays details about a managed array.");
+    g_services->AddManagedCommand("dumparray", "Displays details about a managed array.");
     g_services->AddManagedCommand("dumpasync", "Displays information about async \"stacks\" on the garbage-collected heap.");
     g_services->AddManagedCommand("dumpassembly", "Displays details about an assembly.");
     g_services->AddCommand("dumpclass", new sosCommand("DumpClass"), "Displays information about a EE class structure at the specified address.");

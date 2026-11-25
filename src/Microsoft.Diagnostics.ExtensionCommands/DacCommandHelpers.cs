@@ -84,6 +84,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
+        internal static unsafe string GetModuleName(ISOSDacInterface dac, ulong moduleAddress, IModuleService modules, OSPlatform targetOS, int pointerSize)
+        {
+            DacpModuleData module = default;
+            return dac.GetModuleData(moduleAddress, &module) == 0 ? GetModuleName(dac, module, modules, targetOS, pointerSize) : null;
+        }
+
         internal static unsafe string GetModuleName(ISOSDacInterface dac, DacpModuleData module, IModuleService modules, OSPlatform targetOS, int pointerSize)
         {
             if (module.PEAssembly == 0)
@@ -133,6 +139,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
             return null;
+        }
+
+        internal static unsafe string GetMethodTableName(ISOSDacInterface dac, ulong methodTable)
+        {
+            Span<char> name = stackalloc char[512];
+            uint needed = 0;
+            fixed (char* buffer = name)
+            {
+                int status = dac.GetMethodTableName(methodTable, (uint)name.Length, buffer, &needed);
+                if (needed <= (uint)name.Length)
+                {
+                    return status >= 0 && needed != 0 ? ReadNullTerminatedString(name[..(int)needed]) : null;
+                }
+            }
+
+            name = new char[needed];
+            fixed (char* buffer = name)
+            {
+                int status = dac.GetMethodTableName(methodTable, (uint)name.Length, buffer, &needed);
+                return status >= 0 && needed != 0 && needed <= (uint)name.Length ? ReadNullTerminatedString(name[..(int)needed]) : null;
+            }
         }
 
         internal static string ReadNullTerminatedString(ReadOnlySpan<char> buffer)

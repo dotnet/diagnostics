@@ -13,7 +13,6 @@ namespace SOS.Hosting
     [Command(Name = "clrstack",          DefaultOptions = "ClrStack",            Help = "Provides a stack trace of managed code only.")]
     [Command(Name = "clrthreads",        DefaultOptions = "Threads",             Help = "Lists the managed threads running.")]
     [Command(Name = "dbgout",            DefaultOptions = "dbgout",              Help = "Enables/disables (-off) internal SOS logging.")]
-    [Command(Name = "dumparray",         DefaultOptions = "DumpArray",           Help = "Displays details about a managed array.")]
     [Command(Name = "dumpclass",         DefaultOptions = "DumpClass",           Help = "Displays information about a EE class structure at the specified address.")]
     [Command(Name = "dumpdelegate",      DefaultOptions = "DumpDelegate",        Help = "Displays information about a delegate.")]
     [Command(Name = "dumpil",            DefaultOptions = "DumpIL",              Help = "Displays the Microsoft intermediate language (MSIL) that is associated with a managed method.")]

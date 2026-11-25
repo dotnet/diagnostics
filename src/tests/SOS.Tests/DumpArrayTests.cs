@@ -73,6 +73,29 @@ public sealed class DumpArrayTests
         target.Sos($"dumparray -start 99999 {array:x}").AssertContains("Start index out of range");
     }
 
+    [SosTheory]
+    [MemberData(nameof(Matrix))]
+    public async Task DumpArray_SignedStartAndNestedDetails(TestConfig config)
+    {
+        TestMatrices.SkipUnsupportedDumpObj(config);
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        DumpObjResult marker = target.DumpObj(target.FindUniqueObject("FieldMarker"));
+        ulong zeroBased = ObjectCommandParsing.Hex(marker.Field("Numbers").Value);
+        ulong negativeBound = ObjectCommandParsing.Hex(marker.Field("NegativeBoundArray").Value);
+        Assert.Equal(new[] { -2, -1, 0 }, target.DumpArray(negativeBound).Elements.Select(e => e.Index));
+        Assert.Equal(new[] { -1, 0 }, target.DumpArray(negativeBound, start: -1, length: 2).Elements.Select(e => e.Index));
+        target.Sos($"dumparray -start -1 {zeroBased:x}").AssertContains("Start index out of range");
+        target.Sos($"dumparray -length -1 {zeroBased:x}").AssertContains("Invalid parameter -1");
+        target.Sos("dumparray").AssertContains("No array address was provided.");
+
+        ulong nested = ObjectCommandParsing.Hex(marker.Field("NestedArrayElements").Value);
+        SosOutput details = target.Sos($"dumparray -details {nested:x}");
+        Assert.Contains("    String:          field-marker-text    ", details.Lines);
+        Assert.Contains("    Content:         ABC    ", details.Lines);
+    }
+
     private static ulong ArrayAddress(Target target)
     {
         DumpObjResult holder = target.DumpObj(target.FindUniqueObject("FieldMarker"));

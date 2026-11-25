@@ -6,7 +6,6 @@ bpmd
 clrma
 ClrStack
 dbgout
-DumpArray
 DumpClass
 DumpDelegate
 DumpIL

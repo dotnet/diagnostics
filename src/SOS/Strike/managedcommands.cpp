@@ -201,6 +201,12 @@ DECLARE_API(DumpALC)
     return ExecuteManagedOnlyCommand("dumpalc", args);
 }
 
+DECLARE_API(DumpArray)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumparray", args);
+}
+
 DECLARE_API(ThreadState)
 {
     INIT_API_NODAC();

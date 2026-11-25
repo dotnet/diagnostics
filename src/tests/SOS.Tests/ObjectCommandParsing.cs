@@ -335,7 +335,7 @@ public sealed class DumpArrayResult
 {
     private static readonly Regex s_arrayLine =
         new(@"^Array:\s+Rank\s+(?<rank>\d+),\s+Number of elements\s+(?<count>\d+),\s+Type\s+(?<type>.+\S)\s*$", RegexOptions.Compiled);
-    private static readonly Regex s_element = new(@"^\[(?<i>\d+)\]\s+(?<addr>[0-9a-fA-F`]+)\s*$", RegexOptions.Compiled);
+    private static readonly Regex s_element = new(@"^\[(?<i>-?\d+)\]\s+(?<addr>[0-9a-fA-F`]+)\s*$", RegexOptions.Compiled);
 
     public DumpArrayResult(SosOutput output)
     {

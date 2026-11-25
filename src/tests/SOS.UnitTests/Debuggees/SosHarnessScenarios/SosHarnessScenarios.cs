@@ -126,6 +126,8 @@ public static class SosHarnessScenarios
             TextField = FieldMarkerText,
             Value = new ValueMarker { First = ValueMarkerFirst, Second = ValueMarkerSecond },
             Numbers = known,
+            NegativeBoundArray = Array.CreateInstance(typeof(int), new[] { 3 }, new[] { -2 }),
+            NestedArrayElements = new object[] { FieldMarkerText, new byte[] { 65, 66, 67 }, Array.Empty<byte>() },
             ObjectReferences = new[] { new ObjectReference { Value = live } },
             MethodSignature = new byte[] { 0x00, 0x00, 0x01 }, // [DEFAULT] Void ()
             SignatureElement = new byte[] { 0x08 },            // ELEMENT_TYPE_I4
@@ -435,6 +437,8 @@ public sealed class FieldMarker
     public string? TextField;
     public ValueMarker Value;
     public int[]? Numbers;
+    public Array? NegativeBoundArray;
+    public object[]? NestedArrayElements;
     public ObjectReference[]? ObjectReferences;
 
     // Raw COR_SIGNATURE blobs so dumpsig/dumpsigelem can decode a real signature: a method signature

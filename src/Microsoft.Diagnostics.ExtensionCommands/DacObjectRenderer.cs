@@ -14,7 +14,7 @@ using static SOS.Hosting.Interop.ClrDataAddressHelpers;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    internal sealed class DacObjectRenderer(ISOSDacInterface dac, IConsoleService console, IMemoryService memory, IModuleService modules, OSPlatform targetOS, bool dml)
+    internal sealed class DacObjectRenderer(ISOSDacInterface dac, IConsoleService console, IMemoryService memory, IModuleService modules, OSPlatform targetOS, bool dml, bool nested = false)
     {
         private const uint MaxStringSize = 0x200000;
         private const byte ClassInitialized = 1;
@@ -156,9 +156,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                DacpModuleData module = default;
-                string path = dac.GetModuleData(methodTable.module, &module) == 0 ? GetModuleName(dac, module, modules, targetOS, memory.PointerSize) : null;
-                console.WriteLine($"File:        {path ?? "Unknown Module"}");
+                console.WriteLine($"File:        {GetModuleName(dac, methodTable.module, modules, targetOS, memory.PointerSize) ?? "Unknown Module"}");
             }
 
             if (data.ObjectType == DacpObjectType.OBJ_STRING)
@@ -237,22 +235,68 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private unsafe void WriteFields(ulong address, ulong methodTable, DacpMethodTableData type)
+        internal unsafe void WriteValueClass(ulong methodTable, ulong address, bool printFields)
+        {
+            DacpMethodTableData type = default;
+            if (dac.GetMethodTableData(methodTable, &type) != 0)
+            {
+                console.WriteLine("Not a managed object");
+                return;
+            }
+
+            string name = GetMethodTableName(dac, methodTable);
+            if (name is null)
+            {
+                throw new DiagnosticsException("Unable to read method table name");
+            }
+
+            console.WriteLine($"Name:        {name}");
+            WriteAddress("MethodTable: ", methodTable, "DumpMT");
+            ClrDataAddress canonical = 0;
+            if (dac.GetMethodTableForEEClass(type.klass, &canonical) >= 0 && canonical == type.klass)
+            {
+                if (canonical != 0 && canonical != methodTable)
+                {
+                    WriteAddress("Canonical: ", canonical, "DumpMT");
+                }
+            }
+            else
+            {
+                WriteAddress("EEClass:     ", type.klass, "DumpClass");
+            }
+            WriteSize(type.baseSize);
+
+            console.WriteLine($"File:        {GetModuleName(dac, type.module, modules, targetOS, memory.PointerSize) ?? "Unknown Module"}");
+
+            if (printFields)
+            {
+                WriteFields(address, methodTable, type, valueClass: true);
+            }
+        }
+
+        internal unsafe void WriteFields(ulong address, ulong methodTable, DacpMethodTableData type, bool valueClass = false, bool showHeading = true)
         {
             DacpMethodTableFieldData fields = default;
             if (dac.GetMethodTableFieldData(methodTable, &fields) != 0)
             {
                 throw new DiagnosticsException("Unable to display fields");
             }
-            console.WriteLine("Fields:");
+            if (showHeading)
+            {
+                console.WriteLine("Fields:");
+            }
             if (fields.wNumInstanceFields == 0 && fields.wNumStaticFields == 0)
             {
-                console.WriteLine("None");
+                if (showHeading && !valueClass)
+                {
+                    console.WriteLine("None");
+                }
                 return;
             }
 
             int width = memory.PointerSize * 2;
-            console.WriteLine($"{"MT".PadLeft(width)} {"Field",8} {"Offset",8} {"Type",20} {"VT",4} {"Attr",8} {"Value".PadLeft(width)} Name");
+            string fieldIndent = nested ? "    " : "";
+            console.WriteLine($"{fieldIndent}{"MT".PadLeft(width)} {"Field",8} {"Offset",8} {"Type",20} {"VT",4} {"Attr",8} {"Value".PadLeft(width)} Name");
             Stack<(ulong MethodTable, DacpMethodTableData Type, DacpMethodTableFieldData Fields)> hierarchy = new();
             HashSet<ulong> visited = new();
             while (visited.Add(methodTable))
@@ -304,13 +348,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     {
                         staticCount++;
                         bool special = field.bIsThreadLocal != 0 || field.bIsContextLocal != 0 || entry.Type.bIsShared != 0;
-                        uint offset = special ? field.dwOffset : field.dwOffset + (uint)memory.PointerSize;
+                        uint offset = special || valueClass ? field.dwOffset : field.dwOffset + (uint)memory.PointerSize;
                         string kind = field.bIsThreadLocal != 0 ? "TLstatic" : field.bIsContextLocal != 0 ? "CLstatic" : "static";
                         bool shared = entry.Type.bIsShared != 0;
                         WriteFieldPrefix(field, token, offset, shared ? "shared" : kind, reader);
                         if (special)
                         {
-                            console.WriteLine($"{(shared ? kind.PadLeft(width) : "")} {name}");
+                            console.WriteLine($"{(shared ? kind.PadLeft(width) : "")}{fieldIndent} {name}");
                             if (field.bIsThreadLocal != 0)
                             {
                                 WriteThreadStatic(entry.MethodTable, entry.Type, field);
@@ -327,20 +371,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         else if (TryGetStaticAddress(entry.MethodTable, entry.Type, field, out ulong valueAddress))
                         {
                             WriteFieldValue(field, valueAddress);
-                            console.WriteLine($" {name}");
+                            console.WriteLine($"{fieldIndent} {name}");
                         }
                         else
                         {
-                            console.WriteLine(" <no information>");
+                            console.WriteLine($"{fieldIndent} <no information>");
                         }
                     }
                     else
                     {
                         instanceCount++;
-                        uint offset = field.dwOffset + (uint)memory.PointerSize;
+                        uint offset = field.dwOffset + (valueClass ? 0u : (uint)memory.PointerSize);
                         WriteFieldPrefix(field, token, offset, "instance", reader);
-                        WriteFieldValue(field, address + offset);
-                        console.WriteLine($" {name}");
+                        WriteFieldValue(field, address == 0 ? 0 : address + offset);
+                        console.WriteLine($"{fieldIndent} {name}");
                     }
                 }
             }
@@ -667,9 +711,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 typeName = "..." + typeName[^17..];
             }
 
+            string indent = nested ? "    " : "";
+            console.Write(indent);
             WriteDacAddressLink(console, field.MTOfType, memory.PointerSize, "DumpMT", dml, forceDml: dml);
-            string valueType = (uint)field.Type is >= 2 and <= 13 or 0x11 or 0x18 or 0x19 ? "Yes" : "No";
-            console.Write($" {token:x8} {offset,8:x} {typeName,20} {valueType,4} {kind,8} ");
+            string valueType = IsElementValueType((uint)field.Type) ? "Yes" : "No";
+            console.Write($" {token:x8} {offset,8:x} {indent}{typeName,20} {indent}{valueType,4} {indent}{kind,8} {indent}");
         }
 
         private void WriteFieldValue(DacpFieldDescData field, ulong address, bool align = true)
@@ -682,9 +728,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             if ((uint)field.Type == 0x11 && field.bIsStatic == 0)
             {
-                string value = FormatDacAddress(address, memory.PointerSize);
-                string methodTable = FormatDacAddress(field.MTOfType, memory.PointerSize);
-                console.WriteDmlExec(value, dml ? $"!DumpVC /d {methodTable} {value}" : null, forceDml: dml);
+                WriteValueClassLink(field.MTOfType, address);
                 return;
             }
 
@@ -730,9 +774,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ulong pointer = size == 4 ? MemoryMarshal.Read<uint>(valueBytes) : MemoryMarshal.Read<ulong>(valueBytes);
             if (pointer != 0 && (uint)field.Type == 0x11)
             {
-                string value = FormatDacAddress(address, memory.PointerSize);
-                string methodTable = FormatDacAddress(field.MTOfType, memory.PointerSize);
-                console.WriteDmlExec(value, dml ? $"!DumpVC /d {methodTable} {value}" : null, forceDml: dml);
+                WriteValueClassLink(field.MTOfType, address);
             }
             else if (pointer != 0 && (uint)field.Type is 0x0e or 0x0f or 0x12 or 0x14 or 0x1c or 0x1d)
             {
@@ -763,9 +805,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 console.WriteLine($"ThinLock owner {threadId:x} ({pointer}), Recursive {(header & RecursionMask) >> 10:x}");
             }
         }
-        private void WriteSize(ulong size) => console.WriteLine($"Size:        {size}(0x{size:x}) bytes");
+        internal static bool IsElementValueType(uint type) => type is >= 2 and <= 13 or 0x11 or 0x18 or 0x19;
 
-        private void WriteAddress(string label, ulong address, string command)
+        internal static string GetElementTypeName(uint type) => type < s_elementTypeNames.Length ? s_elementTypeNames[type] : "";
+
+        internal void WriteSize(ulong size) => console.WriteLine($"Size:        {size}(0x{size:x}) bytes");
+
+        internal void WriteValueClassLink(ulong methodTable, ulong address)
+        {
+            string value = FormatDacAddress(address, memory.PointerSize);
+            string mt = FormatDacAddress(methodTable, memory.PointerSize);
+            console.WriteDmlExec(value, dml ? $"!DumpVC /d {mt} {value}" : null, forceDml: dml);
+        }
+
+        internal void WriteAddress(string label, ulong address, string command)
         {
             console.Write(label);
             WriteDacAddressLink(console, address, memory.PointerSize, command, dml, forceDml: dml);
@@ -775,34 +828,38 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private unsafe void WriteString(ulong address, ulong dacAddress, ulong size)
         {
             console.Write("String:      ");
+            WriteNestedFragmentIndent();
             if (!memory.ReadDword(address + (uint)memory.PointerSize, out uint length))
             {
-                console.WriteLine("Error getting string data\n");
-                return;
+                console.WriteLine("Error getting string data");
             }
-            if (size > MaxStringSize || length > MaxStringSize)
+            else if (size > MaxStringSize || length > MaxStringSize)
             {
-                console.WriteLine("<String is invalid or too large to print>\n");
-                return;
+                console.WriteLine("<String is invalid or too large to print>");
             }
-            char[] chars = new char[length + 1];
-            fixed (char* buffer = chars)
+            else
             {
-                console.WriteLine(dac.GetObjectStringData(dacAddress, length + 1, buffer, null) == 0 ? ReadNullTerminatedString(chars) : "<Invalid Object>");
+                char[] chars = new char[length + 1];
+                fixed (char* buffer = chars)
+                {
+                    console.Write(dac.GetObjectStringData(dacAddress, length + 1, buffer, null) == 0 ? ReadNullTerminatedString(chars) : "<Invalid Object>");
+                }
             }
+            WriteDetailLineEnd();
         }
 
         private void WriteArray(ulong address, DacpObjectData data)
         {
-            string elementType = data.ElementType < s_elementTypeNames.Length ? s_elementTypeNames[data.ElementType] : "";
+            string elementType = GetElementTypeName(data.ElementType);
             console.Write($"Array:       Rank {data.dwRank}, Number of elements {data.dwNumComponents}, Type {elementType}");
             if (dml)
             {
+                WriteNestedFragmentIndent();
                 console.Write(" (");
                 console.WriteDmlExec("Print Array", $"!DumpArray /d {FormatDacAddress(address, memory.PointerSize)}", forceDml: true);
                 console.Write(")");
             }
-            console.WriteLine();
+            WriteDetailLineEnd();
 
             const uint CharElement = 0x03;
             const uint SByteElement = 0x04;
@@ -827,9 +884,25 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     char c = wide ? MemoryMarshal.Read<char>(bytes[(i * unitSize)..]) : (char)bytes[i];
                     text[i] = c < 32 || (c > 126 && c <= 255) ? '.' : c;
                 }
+                WriteNestedFragmentIndent();
                 console.Write(text.ToString());
             }
+            WriteDetailLineEnd();
+        }
+
+        private void WriteDetailLineEnd()
+        {
+            WriteNestedFragmentIndent();
             console.WriteLine();
+        }
+
+        // Native SOS indents each output call, even when it continues the current line.
+        private void WriteNestedFragmentIndent()
+        {
+            if (nested)
+            {
+                console.Write("    ");
+            }
         }
     }
 }
