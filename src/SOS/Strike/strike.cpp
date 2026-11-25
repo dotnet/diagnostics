@@ -2856,53 +2856,6 @@ DECLARE_API(PrintException)
     return Status;
 }
 
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to dump the contents of an object from a  *
-*    given address
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(DumpVC)
-{
-    INIT_API_PROBE_MANAGED("dumpvc");
-    MINIDUMP_NOT_SUPPORTED();
-
-    DWORD_PTR p_MT = (TADDR)0;
-    DWORD_PTR p_Object = (TADDR)0;
-    BOOL dml = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE}
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&p_MT, COHEX},
-        {&p_Object, COHEX},
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return E_INVALIDARG;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    if (nArg!=2)
-    {
-        ExtOut("Usage: %sdumpvc <Method Table> <Value object start addr>\n", SOSPrefix);
-        return Status;
-    }
-
-    if (!IsMethodTable(p_MT))
-    {
-        ExtOut("Not a managed object\n");
-        return S_OK;
-    }
-
-    return PrintVC(p_MT, p_Object);
-}
-
 #ifndef FEATURE_PAL
 
 #ifdef FEATURE_COMINTEROP

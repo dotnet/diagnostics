@@ -189,7 +189,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("dumpstack", new sosCommand("DumpStack"), "Displays a native and managed stack trace.");
     g_services->AddManagedCommand("dumpstackobjects", "Displays all managed objects found within the bounds of the current stack.");
     g_services->AddManagedCommand("dso", "Displays all managed objects found within the bounds of the current stack.");
-    g_services->AddCommand("dumpvc", new sosCommand("DumpVC"), "Displays info about the fields of a value class.");
+    g_services->AddManagedCommand("dumpvc", "Displays info about the fields of a value class.");
     g_services->AddManagedCommand("eeheap", "Displays info about process memory consumed by internal runtime data structures.");
     g_services->AddCommand("eestack", new sosCommand("EEStack"), "Runs dumpstack on all threads in the process.");
     g_services->AddCommand("eeversion", new sosCommand("EEVersion"), "Displays information about the runtime and SOS versions.");

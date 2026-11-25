@@ -213,6 +213,12 @@ DECLARE_API(DumpClass)
     return ExecuteManagedOnlyCommand("dumpclass", args);
 }
 
+DECLARE_API(DumpVC)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumpvc", args);
+}
+
 DECLARE_API(ThreadState)
 {
     INIT_API_NODAC();

@@ -19,7 +19,6 @@ namespace SOS.Hosting
     [Command(Name = "dumpmt",            DefaultOptions = "DumpMT",              Help = "Displays information about a method table at the specified address.")]
     [Command(Name = "dumpsig",           DefaultOptions = "DumpSig",             Help = "Dumps the signature of a method or field specified by <sigaddr> <moduleaddr>.")]
     [Command(Name = "dumpsigelem",       DefaultOptions = "DumpSigElem",         Help = "Dumps a single element of a signature object.")]
-    [Command(Name = "dumpvc",            DefaultOptions = "DumpVC",              Help = "Displays info about the fields of a value class.")]
     [Command(Name = "eeversion",         DefaultOptions = "EEVersion",           Help = "Displays information about the runtime version.")]
     [Command(Name = "ehinfo",            DefaultOptions = "EHInfo",              Help = "Displays the exception handling blocks in a JIT-ed method.")]
     [Command(Name = "enummem",           DefaultOptions = "enummem",             Help = "ICLRDataEnumMemoryRegions.EnumMemoryRegions test command.")]

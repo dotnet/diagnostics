@@ -13,7 +13,6 @@ DumpMT
 DumpSig
 DumpSigElem
 DumpStack
-DumpVC
 EEVersion
 EEStack
 EHInfo
