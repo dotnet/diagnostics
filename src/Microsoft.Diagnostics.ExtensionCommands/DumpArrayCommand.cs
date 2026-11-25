@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option<bool>(Name = "-nofields", Help = "Omit the field table from element details.")]
         public bool NoFields { get; set; }
 
-        [Option<bool>(Name = "/d", Help = "Enable debugger markup links.")]
+        [Option<bool>(Name = "--dml", Aliases = new[] { "/d" }, Help = "Enable debugger markup links.")]
         public bool DmlEnabled { get; set; }
 
         public override unsafe void Invoke()

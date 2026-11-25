@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument<string>(Name = "address", Help = "EEClass or canonical method table address in hexadecimal or a debugger expression.")]
         public string Address { get; set; }
 
-        [Option<bool>(Name = "/d", Help = "Enable debugger markup links.")]
+        [Option<bool>(Name = "--dml", Aliases = new[] { "/d" }, Help = "Enable debugger markup links.")]
         public bool DmlEnabled { get; set; }
 
         public override unsafe void Invoke()
