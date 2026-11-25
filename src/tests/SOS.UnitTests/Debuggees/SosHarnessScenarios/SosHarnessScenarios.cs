@@ -119,6 +119,12 @@ public static class SosHarnessScenarios
             known[i] = (i + 1) * KnownIntArrayElementStep;
         }
 
+        Type longNamedType = typeof(FieldMarker);
+        for (int i = 0; i < 7; i++)
+        {
+            longNamedType = typeof(Tuple<,>).MakeGenericType(longNamedType, longNamedType);
+        }
+
         s_fields = new FieldMarker
         {
             IntField = FieldMarkerInt,
@@ -128,6 +134,7 @@ public static class SosHarnessScenarios
             Numbers = known,
             NegativeBoundArray = Array.CreateInstance(typeof(int), new[] { 3 }, new[] { -2 }),
             NestedArrayElements = new object[] { FieldMarkerText, new byte[] { 65, 66, 67 }, Array.Empty<byte>() },
+            LongNamedObject = Activator.CreateInstance(typeof(StrongBox<>).MakeGenericType(longNamedType)),
             ObjectReferences = new[] { new ObjectReference { Value = live } },
             MethodSignature = new byte[] { 0x00, 0x00, 0x01 }, // [DEFAULT] Void ()
             SignatureElement = new byte[] { 0x08 },            // ELEMENT_TYPE_I4
@@ -439,6 +446,7 @@ public sealed class FieldMarker
     public int[]? Numbers;
     public Array? NegativeBoundArray;
     public object[]? NestedArrayElements;
+    public object? LongNamedObject;
     public ObjectReference[]? ObjectReferences;
 
     // Raw COR_SIGNATURE blobs so dumpsig/dumpsigelem can decode a real signature: a method signature

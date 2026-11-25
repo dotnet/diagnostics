@@ -25,6 +25,9 @@ public sealed class ObjectInspectionTests
     public static TheoryData<TestConfig> DumpObjFieldsMatrix { get; } = TestConfig.BuildMatrix(
         [TargetCatalog.Scenarios], flavor: Flavor.Core, host: Host.DotnetDump, coreVersion: CoreVersion.Net10);
 
+    public static TheoryData<TestConfig> ObjectInspectionPreviewMatrix { get; } = TestConfig.BuildMatrix(
+        [TargetCatalog.Scenarios], flavor: Flavor.Core, host: Host.DotnetDump, dumpKind: DumpKind.Full, coreVersion: CoreVersion.Net10, dac: Dac.Legacy);
+
     // Live opt-in: !dumpobj reads an object's fields straight from live process memory, so the base
     // dumpobj/dumpmt/dumpmd chain runs dump AND live as the representative live-object-read check. The
     // other inspection methods here (-nofields, ip2md) stay dump-only.
@@ -114,6 +117,22 @@ public sealed class ObjectInspectionTests
         Assert.Empty(noFields.Fields);          // -nofields drops the Fields table
         Assert.Equal(full.Name, noFields.Name); // but the scalar identity is unchanged
         Assert.Equal(full.MethodTable, noFields.MethodTable);
+    }
+
+    [WindowsTheory]
+    [MemberData(nameof(ObjectInspectionPreviewMatrix))]
+    public async Task DumpClass_PrintsFullGenericName(TestConfig config)
+    {
+        TestMatrices.SkipUnsupportedDumpObj(config);
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        DumpObjResult marker = target.DumpObj(target.FindUniqueObject("FieldMarker"));
+        ulong longNamedObject = ObjectCommandParsing.Hex(marker.Field("LongNamedObject").Value);
+        ulong longNamedMethodTable = target.Sos($"dumpobj -nofields {longNamedObject:x}")["MethodTable"].AsUInt64(Sos.Addr);
+        string longClassName = target.Sos($"dumpclass {longNamedMethodTable:x}")["Class Name"].Value;
+        Assert.True(longClassName.Length > 2048);
+        Assert.Equal(128, Regex.Matches(longClassName, "FieldMarker").Count);
     }
 
     [SosTheory]
