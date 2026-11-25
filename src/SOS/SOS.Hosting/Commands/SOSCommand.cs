@@ -16,7 +16,6 @@ namespace SOS.Hosting
     [Command(Name = "dumpdelegate",      DefaultOptions = "DumpDelegate",        Help = "Displays information about a delegate.")]
     [Command(Name = "dumpil",            DefaultOptions = "DumpIL",              Help = "Displays the Microsoft intermediate language (MSIL) that is associated with a managed method.")]
     [Command(Name = "dumpmd",            DefaultOptions = "DumpMD",              Help = "Displays information about a MethodDesc structure at the specified address.")]
-    [Command(Name = "dumpmt",            DefaultOptions = "DumpMT",              Help = "Displays information about a method table at the specified address.")]
     [Command(Name = "dumpsig",           DefaultOptions = "DumpSig",             Help = "Dumps the signature of a method or field specified by <sigaddr> <moduleaddr>.")]
     [Command(Name = "dumpsigelem",       DefaultOptions = "DumpSigElem",         Help = "Dumps a single element of a signature object.")]
     [Command(Name = "eeversion",         DefaultOptions = "EEVersion",           Help = "Displays information about the runtime version.")]

@@ -658,7 +658,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return false;
         }
 
-        private unsafe MetadataReaderProvider OpenMetadata(ulong moduleAddress)
+        internal unsafe MetadataReaderProvider OpenMetadata(ulong moduleAddress)
         {
             const int MaxMetadataSize = 64 * 1024 * 1024;
             DacpModuleData module = default;

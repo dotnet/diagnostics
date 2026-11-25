@@ -180,7 +180,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddManagedCommand("dumplog", "Writes the contents of an in-memory stress log to the specified file.");
     g_services->AddCommand("dumpmd", new sosCommand("DumpMD"), "Displays information about a MethodDesc structure at the specified address.");
     g_services->AddManagedCommand("dumpmodule", "Displays information about a managed module.");
-    g_services->AddCommand("dumpmt", new sosCommand("DumpMT"), "Displays information about a method table at the specified address.");
+    g_services->AddManagedCommand("dumpmt", "Displays information about a method table at the specified address.");
     PCSTR dumpObjAliases[] = { "do" };
     g_services->AddCommand("dumpobj", "Displays info about an object at the specified address.", dumpObjAliases, ARRAY_SIZE(dumpObjAliases));
     g_services->AddManagedCommand("dumpruntimetypes", "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.");

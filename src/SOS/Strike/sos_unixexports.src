@@ -9,7 +9,6 @@ dbgout
 DumpDelegate
 DumpIL
 DumpMD
-DumpMT
 DumpSig
 DumpSigElem
 DumpStack
