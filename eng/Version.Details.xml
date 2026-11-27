@@ -19,17 +19,17 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26574.7">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26576.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>5aa848f3b650ea3b7b0f0f254d50151ac18a7c9c</Sha>
+      <Sha>2b736f350c09467768507f97fbfbbd6a7faf291d</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.26574.7">
+    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.26576.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>5aa848f3b650ea3b7b0f0f254d50151ac18a7c9c</Sha>
+      <Sha>2b736f350c09467768507f97fbfbbd6a7faf291d</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="10.0.0-beta.26574.7">
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="10.0.0-beta.26576.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>5aa848f3b650ea3b7b0f0f254d50151ac18a7c9c</Sha>
+      <Sha>2b736f350c09467768507f97fbfbbd6a7faf291d</Sha>
     </Dependency>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <Dependency Name="Microsoft.NET.Sdk" Version="12.0.100-alpha.1.26574.104">
@@ -86,9 +86,9 @@
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>ef544d55f723ac04899adb29423df4987466e8be</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Helix.Sdk" Version="10.0.0-beta.26574.7">
+    <Dependency Name="Microsoft.DotNet.Helix.Sdk" Version="10.0.0-beta.26576.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>5aa848f3b650ea3b7b0f0f254d50151ac18a7c9c</Sha>
+      <Sha>2b736f350c09467768507f97fbfbbd6a7faf291d</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
