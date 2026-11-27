@@ -134,7 +134,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         /// <param name="assemblyPath">file path of the assembly or null if the module is in-memory or dynamic</param>
         /// <param name="isFileLayout">type of in-memory PE layout, if true, file based layout otherwise, loaded layout</param>
-        /// <param name="peStream">in-memory PE stream</param>
+        /// <param name="peStream">Pass a seekable PE stream, or null to open <paramref name="assemblyPath"/>.</param>
         /// <returns>symbol file or null</returns>
         /// <remarks>
         /// Assumes that neither PE image nor PDB loaded into memory can be unloaded or moved around.

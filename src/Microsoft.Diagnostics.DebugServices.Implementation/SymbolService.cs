@@ -472,17 +472,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </remarks>
         public ISymbolFile OpenSymbolFile(string assemblyPath, bool isFileLayout, Stream peStream)
         {
-            if (assemblyPath is null)
+            if (assemblyPath is null && peStream is null)
             {
                 throw new ArgumentNullException(nameof(assemblyPath));
             }
 
-            if (peStream is null)
-            {
-                throw new ArgumentNullException(nameof(peStream));
-            }
-
-            if (!peStream.CanSeek)
+            if (peStream is not null && !peStream.CanSeek)
             {
                 throw new ArgumentException("Stream is not seakable", nameof(peStream));
             }
