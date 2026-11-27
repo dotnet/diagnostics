@@ -27,6 +27,12 @@ enum CDacLoadPolicy
     CDacLoadPolicy_LegacyDacOnly = 2,
 };
 
+// cDAC-specific failure HRESULTs. Values mirror CdacHResults in the cDAC
+// (Microsoft.Diagnostics.DataContractReader.Abstractions/CdacHResults.cs).
+
+// No usable cDAC contract descriptor could be located for the target runtime module.
+#define CDAC_E_DESCRIPTOR_NOT_FOUND ((HRESULT)0xA0DAC011L)
+
 EXTERN_C HRESULT
 CreateProcessForLaunch(
     _In_ LPWSTR lpCommandLine,
