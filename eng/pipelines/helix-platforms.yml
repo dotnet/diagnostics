@@ -31,11 +31,11 @@ variables:
   - name: helix_linux_arm64_ubuntu_2604_llvm_internal
     value: (Ubuntu.2604.ArmArch)AzureLinux.4.Arm64@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-arm64v8
 
-  - name: helix_linux_musl_x64_alpine_323
-    value: '(Alpine.323.Amd64.Open)azurelinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
+  - name: helix_linux_musl_x64_alpine_324
+    value: '(Alpine.324.Amd64.Open)azurelinux.4.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-amd64'
 
-  - name: helix_linux_musl_x64_alpine_323_internal
-    value: '(Alpine.323.Amd64)azurelinux.3.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
+  - name: helix_linux_musl_x64_alpine_324_internal
+    value: '(Alpine.324.Amd64)azurelinux.4.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-amd64'
 
   # Windows platforms
 
@@ -79,10 +79,10 @@ variables:
     value: ${{ variables.helix_linux_arm64_ubuntu_2604_llvm_internal }}
 
   - name: helix_linux_musl_x64
-    value: ${{ variables.helix_linux_musl_x64_alpine_323 }}
+    value: ${{ variables.helix_linux_musl_x64_alpine_324 }}
 
   - name: helix_linux_musl_x64_internal
-    value: ${{ variables.helix_linux_musl_x64_alpine_323_internal }}
+    value: ${{ variables.helix_linux_musl_x64_alpine_324_internal }}
 
   - name: helix_win_x64
     value: ${{ variables.helix_windows_x64_runtime }}
