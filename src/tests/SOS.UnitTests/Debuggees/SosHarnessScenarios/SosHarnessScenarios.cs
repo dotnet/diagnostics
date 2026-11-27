@@ -66,6 +66,7 @@ public static class SosHarnessScenarios
 
     // Object-inspection oracle (known fields, struct field, and int[] field), live from the heap stop on.
     private static FieldMarker? s_fields;
+    private static ThreadStaticMarker? s_threadStatics;
 
     // Diagnostic-state oracles, live from the heap stop onward: a never-firing timer (!timerinfo), a
     // suspended async state machine + its gate (!dumpasync), and populated concurrent dictionaries (!dcd).
@@ -118,6 +119,12 @@ public static class SosHarnessScenarios
             known[i] = (i + 1) * KnownIntArrayElementStep;
         }
 
+        Type longNamedType = typeof(FieldMarker);
+        for (int i = 0; i < 7; i++)
+        {
+            longNamedType = typeof(Tuple<,>).MakeGenericType(longNamedType, longNamedType);
+        }
+
         s_fields = new FieldMarker
         {
             IntField = FieldMarkerInt,
@@ -125,6 +132,9 @@ public static class SosHarnessScenarios
             TextField = FieldMarkerText,
             Value = new ValueMarker { First = ValueMarkerFirst, Second = ValueMarkerSecond },
             Numbers = known,
+            NegativeBoundArray = Array.CreateInstance(typeof(int), new[] { 3 }, new[] { -2 }),
+            NestedArrayElements = new object[] { FieldMarkerText, new byte[] { 65, 66, 67 }, Array.Empty<byte>() },
+            LongNamedObject = Activator.CreateInstance(typeof(StrongBox<>).MakeGenericType(longNamedType)),
             ObjectReferences = new[] { new ObjectReference { Value = live } },
             MethodSignature = new byte[] { 0x00, 0x00, 0x01 }, // [DEFAULT] Void ()
             SignatureElement = new byte[] { 0x08 },            // ELEMENT_TYPE_I4
@@ -143,6 +153,9 @@ public static class SosHarnessScenarios
         s_concurrentQueue.Enqueue(0x222);
         s_concurrentQueue.Enqueue(0x333);
 
+        s_threadStatics = new ThreadStaticMarker();
+        ThreadStaticMarker.Number = 12345;
+        ThreadStaticMarker.Text = "thread-static-main";
         Thread fatLockHolder = new(FatLockHolder) { IsBackground = false, Name = "FatLockHolder" };
         fatLockHolder.Start();
         s_fatLockHeld.Wait();
@@ -234,6 +247,8 @@ public static class SosHarnessScenarios
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void FatLockHolder()
     {
+        ThreadStaticMarker.Number = -6789;
+        ThreadStaticMarker.Text = "thread-static-lock-holder";
         lock (s_fatLock)
         {
             s_fatLockHeld.Set();
@@ -411,6 +426,15 @@ public struct ObjectReference
     public object? Value;
 }
 
+public sealed class ThreadStaticMarker
+{
+    [ThreadStatic]
+    public static int Number;
+
+    [ThreadStatic]
+    public static string? Text;
+}
+
 // A reference type with known instance fields of several shapes (primitive, wide primitive, reference,
 // and an embedded value type), so dumpobj prints a non-trivial Fields table to assert against.
 public sealed class FieldMarker
@@ -420,6 +444,9 @@ public sealed class FieldMarker
     public string? TextField;
     public ValueMarker Value;
     public int[]? Numbers;
+    public Array? NegativeBoundArray;
+    public object[]? NestedArrayElements;
+    public object? LongNamedObject;
     public ObjectReference[]? ObjectReferences;
 
     // Raw COR_SIGNATURE blobs so dumpsig/dumpsigelem can decode a real signature: a method signature

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
@@ -890,6 +891,17 @@ namespace SOS.Hosting {
 
     public static class ComWrapper
     {
+        /// <summary>
+        /// Releases a COM proxy created with <see cref="UniqueComInterfaceMarshaller{T}"/>.
+        /// The owner must call this only once and must not use the proxy afterward.
+        /// </summary>
+        public static void FinalReleaseUniqueProxy(ComObject proxy)
+        {
+            proxy.FinalRelease();
+            // .NET 8 does not suppress the proxy finalizer after releasing its COM references.
+            GC.SuppressFinalize(proxy);
+        }
+
         /// <summary>
         /// Asserts the the reference count doesn't go below 0.
         /// </summary>

@@ -168,6 +168,89 @@ DECLARE_API(DumpAsync)
     return ExecuteManagedOnlyCommand("dumpasync", args);
 }
 
+DECLARE_API(DumpAssembly)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("dumpassembly", args);
+}
+
+DECLARE_API(DumpDomain)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("dumpdomain", args);
+}
+
+DECLARE_API(DumpModule)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("dumpmodule", args);
+}
+
+DECLARE_API(DumpObj)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumpobj", args);
+}
+
+DECLARE_API(DumpALC)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumpalc", args);
+}
+
+DECLARE_API(DumpArray)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumparray", args);
+}
+
+DECLARE_API(DumpClass)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumpclass", args);
+}
+
+DECLARE_API(DumpDelegate)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumpdelegate", args);
+}
+
+DECLARE_API(DumpMT)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumpmt", args);
+}
+
+DECLARE_API(DumpVC)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumpvc", args);
+}
+
+DECLARE_API(ThreadState)
+{
+    INIT_API_NODAC();
+    return ExecuteManagedOnlyCommand("threadstate", args);
+}
+
+DECLARE_API(DumpGCData)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("dumpgcdata", args);
+}
+
+DECLARE_API(SyncBlk)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("syncblk", args);
+}
+
 DECLARE_API(logging)
 {
     INIT_API_EXT();

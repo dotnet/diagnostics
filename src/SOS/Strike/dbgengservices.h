@@ -8,6 +8,8 @@
 #include <dbgeng.h>
 #include <dbgmodel.h>
 #include "debuggerservices.h"
+#include "debuggerexpressionservice.h"
+#include "debuggerdumpservice.h"
 #include "debuggerthreadstacktraceservice.h"
 #include "remotememoryservice.h"
 #include "extensions.h"
@@ -20,7 +22,7 @@ class IMachine;
 extern "C" {
 #endif
 
-class DbgEngServices : public IDebuggerServices, public IDebuggerThreadStackTraceService, public IRemoteMemoryService, public IDebugEventCallbacks
+class DbgEngServices : public IDebuggerServices, public IDebuggerThreadStackTraceService, public IRemoteMemoryService, public IDebugEventCallbacks, public IDebuggerExpressionService, public IDebuggerDumpService
 {
 private:
     LONG m_ref;
@@ -260,6 +262,18 @@ public:
         ULONG64 address,
         ULONG32 size,
         ULONG32 typeFlags);
+
+    //----------------------------------------------------------------------------
+    // IDebuggerExpressionService
+    //----------------------------------------------------------------------------
+
+    HRESULT STDMETHODCALLTYPE EvaluateExpression(PCSTR expression, PULONG64 value) override;
+
+    //----------------------------------------------------------------------------
+    // IDebuggerDumpService
+    //----------------------------------------------------------------------------
+
+    HRESULT STDMETHODCALLTYPE IsMinidumpSafeModeEnabled() override;
 
     //----------------------------------------------------------------------------
     // IDebugEventCallbacks

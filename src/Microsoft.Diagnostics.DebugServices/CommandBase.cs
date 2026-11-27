@@ -107,13 +107,10 @@ namespace Microsoft.Diagnostics.DebugServices
                 return false;
             }
 
-            // skip 0x or leading 0000 if needed
-            if (addressInHexa.StartsWith("0x"))
+            if (addressInHexa.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
             {
                 addressInHexa = addressInHexa.Substring(2);
             }
-
-            addressInHexa = addressInHexa.TrimStart('0');
 
             int index = addressInHexa.IndexOf('`');
             if (index >= 0 && index < addressInHexa.Length - 1)

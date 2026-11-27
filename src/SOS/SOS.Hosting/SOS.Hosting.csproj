@@ -10,10 +10,13 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
+    <CDacSourceRoot>$(MSBuildThisFileDirectory)..\..\cdac\runtime\src\native\managed\cdac</CDacSourceRoot>
+    <Nullable>annotations</Nullable>
   </PropertyGroup>
 
   <PropertyGroup>
-    <NoWarn>$(NoWarn);SYSLIB1054;CA1416;CA2249</NoWarn>
+    <!-- Match cDAC's COM pointer warning policy for the linked declarations. -->
+    <NoWarn>$(NoWarn);SYSLIB1054;CA1416;CA2249;CS8500;CS8969</NoWarn>
   </PropertyGroup>
   
   <ItemGroup>
@@ -28,5 +31,17 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
     <Compile Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\PathUtilities.cs" Link="Shared\PathUtilities.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="$(CDacSourceRoot)\Microsoft.Diagnostics.DataContractReader.Legacy\ISOSDacInterface.cs;
+                      $(CDacSourceRoot)\Microsoft.Diagnostics.DataContractReader.Legacy\IXCLRData.cs;
+                      $(CDacSourceRoot)\Microsoft.Diagnostics.DataContractReader.Legacy\ICLRData.cs;
+                      $(CDacSourceRoot)\Microsoft.Diagnostics.DataContractReader.Legacy\IMetaDataImport.cs;
+                      $(CDacSourceRoot)\Microsoft.Diagnostics.DataContractReader.Legacy\Interop.BOOL.cs;
+                      $(CDacSourceRoot)\Microsoft.Diagnostics.DataContractReader.Legacy\Marshalling\ClrDataAddress.cs;
+                      $(CDacSourceRoot)\Microsoft.Diagnostics.DataContractReader.Legacy\Marshalling\DacComNullableByRef.cs;
+                      $(CDacSourceRoot)\..\..\..\libraries\Common\src\System\HResults.cs"
+             Link="Interop\CDac\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

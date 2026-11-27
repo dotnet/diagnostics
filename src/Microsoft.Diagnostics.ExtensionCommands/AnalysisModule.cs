@@ -46,15 +46,26 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<AnalyzeOOMCommand>();
             commandService.AddCommands<AssembliesCommand>();
             commandService.AddCommands<CrashInfoCommand>();
+            commandService.AddCommands<DumpAssemblyCommand>();
             commandService.AddCommands<DumpAsyncCommand>();
             commandService.AddCommands<DumpConcurrentDictionaryCommand>();
             commandService.AddCommands<DumpConcurrentQueueCommand>();
+            commandService.AddCommands<DumpDomainCommand>();
             commandService.AddCommands<DumpExceptionsCommand>();
+            commandService.AddCommands<DumpGcDataCommand>();
+            commandService.AddCommands<DumpModuleCommand>();
             commandService.AddCommands<DumpGenCommand>();
             commandService.AddCommands<DumpHeapCommand>();
             commandService.AddCommands<DumpHttpCommand>();
             commandService.AddCommands<DumpLogCommand>();
             commandService.AddCommands<DumpObjGCRefsCommand>();
+            commandService.AddCommands<DumpObjCommand>();
+            commandService.AddCommands<DumpAlcCommand>();
+            commandService.AddCommands<DumpVcCommand>();
+            commandService.AddCommands<DumpArrayCommand>();
+            commandService.AddCommands<DumpClassCommand>();
+            commandService.AddCommands<DumpDelegateCommand>();
+            commandService.AddCommands<DumpMtCommand>();
             commandService.AddCommands<DumpRequestsCommand>();
             commandService.AddCommands<DumpRuntimeTypeCommand>();
             commandService.AddCommands<DumpStackObjectsCommand>();
@@ -96,9 +107,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             commandService.AddCommands<SimulateGCHeapCorruption>();
 #endif
             commandService.AddCommands<SizeStatsCommand>();
+            commandService.AddCommands<SyncBlkCommand>();
             commandService.AddCommands<TaskStateCommand>();
             commandService.AddCommands<ThreadPoolCommand>();
             commandService.AddCommands<ThreadPoolQueueCommand>();
+            commandService.AddCommands<ThreadStateCommand>();
             commandService.AddCommands<TimersCommand>();
             commandService.AddCommands<Token2EECommand>();
             commandService.AddCommands<TraverseHeapCommand>();

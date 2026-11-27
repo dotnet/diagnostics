@@ -5,6 +5,7 @@
 #include <string>
 #include <set>
 #include <vector>
+#include "debuggerexpressionservice.h"
 #include "debuggerthreadstacktraceservice.h"
 
 #define CACHE_SIZE  4096
@@ -19,7 +20,7 @@ struct SectionRange
     lldb::SBSection section;
 };
 
-class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices, public IDebuggerThreadStackTraceService
+class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices, public IDebuggerThreadStackTraceService, public IDebuggerExpressionService
 {
 private:
     LONG m_ref;
@@ -137,6 +138,8 @@ public:
         DWORD threadId,
         ULONG32 contextSize,
         PBYTE context);
+
+    HRESULT STDMETHODCALLTYPE EvaluateExpression(PCSTR expression, PULONG64 value);
 
     HRESULT STDMETHODCALLTYPE GetDebuggerStackTrace(
         ULONG32 sysId,

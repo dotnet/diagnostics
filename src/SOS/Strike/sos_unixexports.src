@@ -6,22 +6,11 @@ bpmd
 clrma
 ClrStack
 dbgout
-DumpALC
-DumpArray
-DumpAssembly
-DumpClass
-DumpDelegate
-DumpDomain
-DumpGCData
 DumpIL
 DumpMD
-DumpModule
-DumpMT
-DumpObj
 DumpSig
 DumpSigElem
 DumpStack
-DumpVC
 EEVersion
 EEStack
 EHInfo
@@ -40,9 +29,7 @@ SOSStatus
 SOSFlush
 runtimes
 SuppressJitOptimization
-SyncBlk
 Threads
-ThreadState
 u
 
 SOSInitializeByHost

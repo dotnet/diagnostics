@@ -303,6 +303,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Output = new ConsoleServiceWrapper(consoleService.Write),
                     Error = new ConsoleServiceWrapper(consoleService.WriteError)
                 };
+                if (services.GetService<IHost>()?.HostType is HostType.DbgEng or HostType.Lldb)
+                {
+                    // In a debugger, tokens such as @$t0 are expressions, not response files.
+                    configuration.ResponseFileTokenReplacer = null;
+                }
 
                 // Parse the command line and invoke the command
                 ParseResult parseResult = configuration.Parse(commandLine);

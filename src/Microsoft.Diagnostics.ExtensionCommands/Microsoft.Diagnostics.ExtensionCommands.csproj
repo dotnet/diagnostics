@@ -30,5 +30,6 @@
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
+    <ProjectReference Include="..\SOS\SOS.Hosting\SOS.Hosting.csproj" />
   </ItemGroup>
 </Project>

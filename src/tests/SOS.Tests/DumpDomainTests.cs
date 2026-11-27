@@ -82,9 +82,28 @@ public sealed class DumpDomainTests
             ?? throw new Xunit.Sdk.XunitException($"dumpdomain did not list the debuggee assembly '{moduleName}':\n{domains.Output.Text}");
         DomainInfo owner = domains.Domains.Single(d => d.Assemblies.Any(a => a.Address == debuggee.Address));
 
+        SosOutput singleDomain = target.Sos($"dumpdomain {owner.Address:x}");
+        Assert.Equal(owner.Address, Assert.Single(new DumpDomainResult(singleDomain).Domains).Address);
+        Assert.Equal(domains.Output.Text, target.Sos("dumpdomain 0").Text);
+        if (config.Host == Host.Cdb)
+        {
+            Assert.Equal(singleDomain.Text, target.Sos($"dumpdomain /d @$ptrsize+0x{owner.Address:x}-@$ptrsize").Text);
+        }
+
         // Feed the assembly address from dumpdomain into dumpassembly; the two views must agree exactly.
         DumpAssemblyResult assembly = target.DumpAssembly(debuggee.Address);
         Assert.Equal(owner.Address, assembly.ParentDomain);
+
+        string? expression = config.Host switch
+        {
+            Host.Cdb => $"@$ptrsize+0x{debuggee.Address:x}-@$ptrsize",
+            Host.Lldb => $"0x{debuggee.Address:x}+0",
+            _ => null,
+        };
+        if (expression is not null)
+        {
+            Assert.Equal(assembly.Output.Text, target.Sos($"DumpAssembly /d {expression}").Text);
+        }
 
         // On-disk flavors carry the assembly's full path as its Name in both commands. Single-file bundles
         // have no on-disk assembly, so dumpdomain prints an empty path while dumpassembly prints "Unknown";

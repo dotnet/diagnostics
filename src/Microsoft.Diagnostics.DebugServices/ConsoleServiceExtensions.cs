@@ -59,9 +59,14 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="console">console service instance</param>
         /// <param name="text">The display text.</param>
         /// <param name="cmd">The action to perform.</param>
-        public static void WriteDmlExec(this IConsoleService console, string text, string cmd)
+        public static void WriteDmlExec(this IConsoleService console, string text, string cmd) => WriteDmlExec(console, text, cmd, forceDml: false);
+
+        /// <summary>
+        /// Writes an exec tag, optionally overriding the debugger's DML preference.
+        /// </summary>
+        public static void WriteDmlExec(this IConsoleService console, string text, string cmd, bool forceDml)
         {
-            if (!console.SupportsDml || string.IsNullOrWhiteSpace(cmd))
+            if (string.IsNullOrWhiteSpace(cmd) || (!forceDml && !console.SupportsDml))
             {
                 console.WriteString(OutputType.Default, OutputLevel.Normal, text);
             }

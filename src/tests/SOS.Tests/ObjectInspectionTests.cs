@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.RegularExpressions;
 using SOS.TestHarness;
 using Xunit;
 
@@ -20,6 +21,12 @@ public sealed class ObjectInspectionTests
     public static TheoryData<TestConfig> DumpObjChainMatrix { get; } = BuildDumpObjChainMatrix();
 
     public static TheoryData<TestConfig> DumpObjNoFieldsMatrix { get; } = TestMatrices.CoreFramework([TargetCatalog.Scenarios]);
+
+    public static TheoryData<TestConfig> DumpObjFieldsMatrix { get; } = TestConfig.BuildMatrix(
+        [TargetCatalog.Scenarios], flavor: Flavor.Core, host: Host.DotnetDump, coreVersion: CoreVersion.Net10);
+
+    public static TheoryData<TestConfig> ObjectInspectionPreviewMatrix { get; } = TestConfig.BuildMatrix(
+        [TargetCatalog.Scenarios], flavor: Flavor.Core, host: Host.DotnetDump, dumpKind: DumpKind.Full, coreVersion: CoreVersion.Net10, dac: Dac.Legacy);
 
     // Live opt-in: !dumpobj reads an object's fields straight from live process memory, so the base
     // dumpobj/dumpmt/dumpmd chain runs dump AND live as the representative live-object-read check. The
@@ -110,6 +117,102 @@ public sealed class ObjectInspectionTests
         Assert.Empty(noFields.Fields);          // -nofields drops the Fields table
         Assert.Equal(full.Name, noFields.Name); // but the scalar identity is unchanged
         Assert.Equal(full.MethodTable, noFields.MethodTable);
+    }
+
+    [WindowsTheory]
+    [MemberData(nameof(ObjectInspectionPreviewMatrix))]
+    public async Task DumpClass_PrintsFullGenericName(TestConfig config)
+    {
+        TestMatrices.SkipUnsupportedDumpObj(config);
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        DumpObjResult marker = target.DumpObj(target.FindUniqueObject("FieldMarker"));
+        ulong longNamedObject = ObjectCommandParsing.Hex(marker.Field("LongNamedObject").Value);
+        ulong longNamedMethodTable = target.Sos($"dumpobj -nofields {longNamedObject:x}")["MethodTable"].AsUInt64(Sos.Addr);
+        string longClassName = target.Sos($"dumpclass {longNamedMethodTable:x}")["Class Name"].Value;
+        Assert.True(longClassName.Length > 2048);
+        Assert.Equal(128, Regex.Matches(longClassName, "FieldMarker").Count);
+    }
+
+    [SosTheory]
+    [MemberData(nameof(DumpObjFieldsMatrix))]
+    public async Task DumpObj_AliasAndNoFields(TestConfig config)
+    {
+        TestMatrices.SkipUnsupportedDumpObj(config);
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        ulong marker = target.FindUniqueObject("FieldMarker");
+        SosOutput full = target.Sos($"dumpobj {marker:x}");
+        full.AssertContains("IntField");
+        Assert.Equal(full.Text, target.Sos($"do {marker:x}").Text);
+        SosOutput noFields = target.Sos($"dumpobj -nofields {marker:x}");
+        Assert.DoesNotContain("Fields:", noFields.Text);
+        Assert.Equal(noFields.Text, target.Sos($"do -nofields {marker:x}").Text);
+    }
+
+    [SosTheory]
+    [MemberData(nameof(DumpObjFieldsMatrix))]
+    public async Task DumpObj_ThreadStaticFields(TestConfig config)
+    {
+        TestMatrices.SkipUnsupportedDumpObj(config);
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        ulong marker = target.FindUniqueObject("ThreadStaticMarker");
+        SosOutput output = target.Sos($"dumpobj {marker:x}");
+        output.AssertContains("Thread static values (Thread:Value)");
+        AssertThreadStaticText("12345", "thread-static-main");
+        AssertThreadStaticText("-6789", "thread-static-lock-holder");
+        Assert.DoesNotContain("Thread static values", target.Sos($"dumpobj -nofields {marker:x}").Text);
+
+        void AssertThreadStaticText(string number, string text)
+        {
+            Match thread = Assert.Single(Regex.Matches(output.Text, $@"(?m)^ +([0-9a-f]+):{number}\r?$").Cast<Match>());
+            string threadId = thread.Groups[1].Value;
+            Match reference = Assert.Single(Regex.Matches(output.Text, $@"(?m)^ +{threadId}:([0-9a-f]{{8,16}})\r?$").Cast<Match>());
+            target.Sos($"dumpobj -nofields {reference.Groups[1].Value}").AssertContains(text);
+        }
+    }
+
+    [SosTheory]
+    [MemberData(nameof(DumpObjFieldsMatrix))]
+    public async Task DumpObj_StaticFieldsAndRuntimeType(TestConfig config)
+    {
+        TestMatrices.SkipUnsupportedDumpObj(config);
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        DumpObjResult marker = target.DumpObj(target.FindUniqueObject("FieldMarker"));
+        ulong text = ObjectCommandParsing.Hex(marker.Field("TextField").Value);
+        target.Sos($"dumpobj {text:x}").AssertContains(" Empty");
+
+        SosRow runtimeType = Assert.Single(target.DumpHeap("-type System.RuntimeType -stat").Statistics, row => row["Class Name"] == "System.RuntimeType");
+        ulong methodTable = runtimeType["MT"].AsUInt64(Sos.Addr);
+        ulong address = target.DumpHeap($"-mt {methodTable:x} -short").ShortAddresses.First();
+        SosOutput runtimeTypeOutput = target.Sos($"dumpobj -nofields {address:x}");
+        runtimeTypeOutput.AssertContains("Type Name:");
+        runtimeTypeOutput.AssertContains("Type MT:");
+    }
+
+    [SosTheory]
+    [MemberData(nameof(DumpObjFieldsMatrix))]
+    public async Task DumpObj_RefsAppendsReferences(TestConfig config)
+    {
+        TestMatrices.SkipUnsupportedDumpObj(config);
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        ulong marker = target.FindUniqueObject("FieldMarker");
+        SosOutput refs = target.Sos($"dumpobjgcrefs {marker:x}");
+        refs.AssertContains("GC Refs:");
+        foreach (string options in new[] { "", "-nofields " })
+        {
+            SosOutput summary = target.Sos($"dumpobj {options}{marker:x}");
+            SosOutput combined = target.Sos($"dumpobj {options}-refs {marker:x}");
+            Assert.Equal(summary.Text.TrimEnd() + "\n" + refs.Text.TrimEnd(), combined.Text.TrimEnd(), ignoreLineEndingDifferences: true);
+        }
     }
 
     [SosTheory]

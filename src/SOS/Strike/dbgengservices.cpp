@@ -162,6 +162,18 @@ DbgEngServices::QueryInterface(
         AddRef();
         return S_OK;
     }
+    else if (InterfaceId == __uuidof(IDebuggerExpressionService))
+    {
+        *Interface = static_cast<IDebuggerExpressionService*>(this);
+        AddRef();
+        return S_OK;
+    }
+    else if (InterfaceId == __uuidof(IDebuggerDumpService))
+    {
+        *Interface = static_cast<IDebuggerDumpService*>(this);
+        AddRef();
+        return S_OK;
+    }
     else if (InterfaceId == __uuidof(IDebugEventCallbacks))
     {
         *Interface = static_cast<IDebugEventCallbacks*>(this);
@@ -469,6 +481,28 @@ DbgEngServices::VirtualUnwind(
     PBYTE context)
 {
     return E_NOTIMPL;
+}
+
+HRESULT STDMETHODCALLTYPE
+DbgEngServices::IsMinidumpSafeModeEnabled()
+{
+    return g_InMinidumpSafeMode ? S_OK : S_FALSE;
+}
+
+HRESULT STDMETHODCALLTYPE
+DbgEngServices::EvaluateExpression(PCSTR expression, PULONG64 value)
+{
+    DEBUG_VALUE result{};
+    ULONG remainder = 0;
+    *value = 0;
+    HRESULT hr = m_control->Evaluate(expression, DEBUG_VALUE_INT64, &result, &remainder);
+    if (hr == S_OK)
+    {
+        if (expression[remainder] != '\0')
+            return E_INVALIDARG;
+        *value = result.I64;
+    }
+    return hr;
 }
 
 HRESULT
