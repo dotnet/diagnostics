@@ -1,0 +1,141 @@
+name: Update release/stable
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 20 * * 5'
+
+concurrency:
+  group: sync-release-stable
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'dotnet/diagnostics'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Update the stable sync branch
+        id: update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_BRANCH: release/stable
+          SOURCE_BRANCH: main
+          PR_BRANCH: automation/release-sync
+        run: |
+          set -euo pipefail
+
+          git fetch origin \
+            "refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH" \
+            "refs/heads/$SOURCE_BRANCH:refs/remotes/origin/$SOURCE_BRANCH"
+
+          stable_sha=$(git rev-parse "origin/$BASE_BRANCH^{commit}")
+          main_sha=$(git rev-parse "origin/$SOURCE_BRANCH^{commit}")
+          if git merge-base --is-ancestor "$main_sha" "$stable_sha"; then
+            echo "$BASE_BRANCH already contains $SOURCE_BRANCH."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git ls-remote --exit-code --heads origin "$PR_BRANCH" > /dev/null; then
+            git fetch origin "refs/heads/$PR_BRANCH:refs/remotes/origin/$PR_BRANCH"
+            git switch -c "$PR_BRANCH" --track "origin/$PR_BRANCH"
+          else
+            git switch -c "$PR_BRANCH" "$stable_sha"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git merge --no-edit "$stable_sha"
+          git merge --no-edit "$main_sha"
+
+          merge_base=$(git merge-base "$stable_sha" "$main_sha")
+          commit_count=$(git rev-list --count --first-parent "$merge_base..$main_sha")
+          max_commits=200
+          body_file="$RUNNER_TEMP/release-sync-pr.md"
+          {
+            echo "Weekly update of \`$BASE_BRANCH\` from \`$SOURCE_BRANCH\`. All changes, including dependency and version files, are taken from \`$SOURCE_BRANCH\`."
+            echo
+            echo "| | Commit |"
+            echo "| --- | --- |"
+            echo "| \`$BASE_BRANCH\` | $stable_sha |"
+            echo "| \`$SOURCE_BRANCH\` | $main_sha |"
+            echo "| Merge base | $merge_base |"
+            echo
+            echo "## Version and dependency changes"
+            echo
+            any_version_change=false
+            for file in global.json eng/Versions.props eng/Version.Details.xml; do
+              if ! git diff --quiet "$stable_sha" HEAD -- "$file"; then
+                any_version_change=true
+                echo "<details><summary><code>$file</code></summary>"
+                echo
+                echo '```diff'
+                if [[ "$file" == eng/Version.Details.xml ]]; then
+                  git diff -U0 "$stable_sha" HEAD -- "$file" | grep -E '^[-+][[:space:]]*<Dependency ' || true
+                else
+                  git diff "$stable_sha" HEAD -- "$file" | tail -n +5
+                fi
+                echo '```'
+                echo
+                echo "</details>"
+                echo
+              fi
+            done
+            if [[ "$any_version_change" == false ]]; then
+              echo "None."
+              echo
+            fi
+            # GitHub renders "#1234" with the PR title, so drop the duplicated subject for PR merges.
+            pr_refs_only='s/^(- [0-9a-f]+ ).* \((#[0-9]+)\)$/\1\2/'
+            echo "## Commits from \`$SOURCE_BRANCH\` ($commit_count)"
+            echo
+            echo "<details><summary>Show commits</summary>"
+            echo
+            git log --first-parent --format='- %h %s' "$merge_base..$main_sha" | sed -E "$pr_refs_only" | head -n "$max_commits"
+            if (( commit_count > max_commits )); then
+              echo "- ... and $(( commit_count - max_commits )) more"
+            fi
+            echo
+            echo "</details>"
+            echo
+            echo "This workflow updates the branch and pull request but does not merge it or publish release artifacts."
+          } > "$body_file"
+
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/$PR_BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update the stable sync pull request
+        if: steps.update.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_BRANCH: release/stable
+          PR_BRANCH: automation/release-sync
+        run: |
+          set -euo pipefail
+
+          body_file="$RUNNER_TEMP/release-sync-pr.md"
+          repo_owner=${GITHUB_REPOSITORY%%/*}
+          pr_number=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$PR_BRANCH" --base "$BASE_BRANCH" --state open --json number,headRepositoryOwner --jq "[.[] | select(.headRepositoryOwner.login == \"$repo_owner\")][0].number // empty")
+          if [[ -n "$pr_number" ]]; then
+            gh pr edit "$pr_number" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Merge main into release/stable" \
+              --body-file "$body_file"
+          else
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base "$BASE_BRANCH" \
+              --head "$PR_BRANCH" \
+              --title "Merge main into release/stable" \
+              --body-file "$body_file"
+          fi
