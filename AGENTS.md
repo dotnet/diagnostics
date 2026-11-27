@@ -162,6 +162,13 @@ The repository follows standard .NET coding conventions defined in the `.editorc
    - Insert final newline
    - Prefer braces even for single-line blocks
 
+### Comments
+
+- **ASCII only**: Comments must not contain non-ASCII characters. Use plain ASCII substitutes: `-` (not an em/en dash), `->` (not an arrow), `"` `'` (not smart quotes), `...` (not an ellipsis character).
+- **Describe the current state, not the history**: A comment should explain what the code does now. Do not narrate what the code "used to" do, what changed, or reference a prior implementation as history. (Rationale for a choice, per the next point, is allowed - phrase it in terms of the alternative, not the past.)
+- **Explain non-obvious "why", not the "what"**: Only comment where the reasoning cannot be inferred from the code. The most valuable comment explains why a more complicated implementation was chosen when a simpler one would cause a regression (compatibility, performance, correctness, etc.). Describe the concrete regression the simpler approach would cause.
+- Do not comment self-explanatory code.
+
 ### Native Code (C/C++)
 
 Native code follows similar conventions:
