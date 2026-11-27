@@ -17,6 +17,24 @@ The goal of this library is as following:
 * Provide tool-specific functionalities that are too high-level (i.e. dumping the GC heap, parsing counter payload, etc.) This will broaden the scope of this library too far and will cause complexity 
 * Parse event payloads (i.e. - This is also command-specific and can be done by other libraries.
 
+## Unix socket peer validation
+
+On Linux and macOS, PID-based endpoint resolution validates the connected
+Unix domain socket's peer PID through the kernel before sending diagnostic
+protocol data. The newest candidate selects either the runtime or
+diagnostic-router endpoint kind, with router candidates preferred for equal
+timestamps. If a candidate is unavailable or does not belong to the requested
+process, the client tries the next candidate of the same kind in timestamp
+order. It does not fall back between endpoint kinds: a router's forwarding
+socket and its own runtime diagnostics socket can share a peer PID while
+serving different targets. If no candidate of the selected kind succeeds,
+the connection fails.
+
+Linux uses `SO_PEERCRED`, whose numeric option value differs on PowerPC, and
+macOS uses `LOCAL_PEERPID`. The peer-PID validation works for both 32-bit and
+64-bit target processes and continues to allow an elevated monitor to connect
+to a less-privileged target process.
+
 ## Sample Code:
 
 Here are some sample code showing the usage of this library.

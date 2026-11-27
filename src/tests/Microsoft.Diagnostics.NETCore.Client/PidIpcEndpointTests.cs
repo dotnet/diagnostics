@@ -2,21 +2,423 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
+using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class PidIpcEndpointTests
     {
+        private readonly ITestOutputHelper _output;
+
         public static bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
         public static bool IsNotLinux => !IsLinux;
+        public static bool IsUnix => IsLinux || RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+        public static IEnumerable<object[]> SpoofConfigurations
+        {
+            get
+            {
+                object[] config = TestRunner.Configurations.FirstOrDefault(
+                    candidate => ((TestConfiguration)candidate[0]).RuntimeFrameworkVersionMajor == 10)
+                    ?? TestRunner.Configurations.First();
+
+                return new[]
+                {
+                    new object[] { config[0], false, false },
+                    new object[] { config[0], false, true },
+                    new object[] { config[0], true, false },
+                    new object[] { config[0], true, true }
+                };
+            }
+        }
+
+        public PidIpcEndpointTests(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
+        [Theory]
+        [InlineData(Architecture.X64, 17)]
+        [InlineData(Architecture.X86, 17)]
+        [InlineData(Architecture.Arm, 17)]
+        [InlineData(Architecture.Arm64, 17)]
+        [InlineData((Architecture)5, 17)] // S390x
+        [InlineData((Architecture)6, 17)] // LoongArch64
+        [InlineData((Architecture)7, 17)] // Armv6
+        [InlineData((Architecture)8, 21)] // Ppc64le
+        [InlineData((Architecture)9, 17)] // RiscV64
+        public void GetLinuxPeerCredentialsOption_ReturnsArchitectureValue(Architecture architecture, int expected)
+        {
+            Assert.Equal(expected, UnixSocketPeer.GetLinuxPeerCredentialsOption(architecture));
+        }
+
+        [Fact]
+        public void GetLinuxPeerCredentialsOption_UnsupportedArchitecture_Throws()
+        {
+            Assert.Throws<PlatformNotSupportedException>(
+                () => UnixSocketPeer.GetLinuxPeerCredentialsOption((Architecture)int.MaxValue));
+        }
+
+        [ConditionalFact(nameof(IsUnix))]
+        public void IsConnectedToProcess_ValidatesKernelPeerCredentials()
+        {
+            string directory = CreateSocketTestDirectory();
+            try
+            {
+                string path = Path.Combine(directory, "peer-socket");
+                using Socket listener = BindSocket(path);
+                listener.Listen(1);
+
+                using Socket client = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                client.Connect(new UnixDomainSocketEndPoint(path));
+                using Socket server = listener.Accept();
+
+                int pid = Environment.ProcessId;
+                Assert.True(UnixSocketPeer.IsConnectedToProcess(client, pid));
+                Assert.True(UnixSocketPeer.IsConnectedToProcess(server, pid));
+                Assert.False(UnixSocketPeer.IsConnectedToProcess(client, pid + 1));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [ConditionalFact(nameof(IsUnix))]
+        public void TryResolveAddress_NoValidRuntimeSocket_DoesNotSelectRouter()
+        {
+            string directory = CreateSocketTestDirectory();
+            try
+            {
+                using Socket router = BindSocket(Path.Combine(directory, $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-1-socket"));
+                Assert.False(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out string address));
+                Assert.Null(address);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [ConditionalTheory(nameof(IsUnix))]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("invalid\0directory")]
+        public void TryResolveAddress_InvalidDirectory_ReturnsFalse(string directory)
+        {
+            Assert.False(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out string address));
+            Assert.Null(address);
+        }
+
+        [ConditionalFact(nameof(IsUnix))]
+        public void TryResolveAddress_PreservesRouterTimestampSelection()
+        {
+            string directory = CreateSocketTestDirectory();
+            try
+            {
+                string runtimePath = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-1-socket");
+                string routerPath = Path.Combine(directory, $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-1-socket");
+                File.WriteAllText(runtimePath, "");
+                Thread.Sleep(1100);
+                File.WriteAllText(routerPath, "");
+                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out string address));
+                Assert.Equal(routerPath, address);
+
+                File.Delete(runtimePath);
+                Thread.Sleep(1100);
+                File.WriteAllText(runtimePath, "");
+                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out address));
+                Assert.Equal(runtimePath, address);
+
+                DateTime timestamp = DateTime.UtcNow;
+                File.SetLastWriteTimeUtc(runtimePath, timestamp);
+                File.SetLastWriteTimeUtc(routerPath, timestamp);
+                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out address));
+                Assert.Equal(routerPath, address);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [ConditionalFact(nameof(IsUnix))]
+        public void TryResolveAddress_IgnoresInvalidCandidateName()
+        {
+            string directory = CreateSocketTestDirectory();
+            try
+            {
+                string validPath = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-1-socket");
+                string invalidPath = Path.Combine(directory, $"dotnet-diagnostic-{Environment.ProcessId}-2,x-socket");
+                File.WriteAllText(validPath, "");
+                Thread.Sleep(1100);
+                File.WriteAllText(invalidPath, "");
+
+                Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out string address));
+                Assert.Equal(validPath, address);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [ConditionalTheory(nameof(IsUnix))]
+        [MemberData(nameof(SpoofConfigurations))]
+        public async Task Connect_RejectsSpoofedCandidateAndFallsBack(TestConfiguration config, bool useRouterName, bool useAsync)
+        {
+            await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
+            await runner.Start(testProcessTimeout: 60_000);
+
+            string otherProcessAddress = PidIpcEndpoint.GetDefaultAddress(runner.Pid);
+            string prefix = useRouterName ? "dotnet-diagnostic-dsrouter" : "dotnet-diagnostic";
+            string spoofPath = Path.Combine(
+                PidIpcEndpoint.IpcRootPath,
+                $"{prefix}-{Environment.ProcessId}-99999999-socket");
+            string validRouterPath = useRouterName
+                ? Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-99999995-socket")
+                : null;
+            try
+            {
+                if (validRouterPath is not null)
+                {
+                    File.CreateSymbolicLink(validRouterPath, PidIpcEndpoint.GetDefaultAddress(Environment.ProcessId));
+                    Thread.Sleep(1100);
+                }
+                File.CreateSymbolicLink(spoofPath, otherProcessAddress);
+
+                Assert.True(PidIpcEndpoint.TryResolveAddress(
+                    PidIpcEndpoint.IpcRootPath,
+                    Environment.ProcessId,
+                    out string resolvedAddress));
+                Assert.Equal(spoofPath, resolvedAddress);
+
+                DiagnosticsClient client = new(Environment.ProcessId);
+                DiagnosticsClientApiShim clientShim = new(client, useAsync);
+                ProcessInfo info = await clientShim.GetProcessInfo();
+                Assert.Equal((ulong)Environment.ProcessId, info.ProcessId);
+            }
+            finally
+            {
+                File.Delete(spoofPath);
+                if (validRouterPath is not null)
+                {
+                    File.Delete(validRouterPath);
+                }
+            }
+        }
+
+        [ConditionalTheory(nameof(IsUnix))]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Connect_SkipsUnconnectableCandidate(bool useRouterName)
+        {
+            string prefix = useRouterName ? "dotnet-diagnostic-dsrouter" : "dotnet-diagnostic";
+            string invalidPath = Path.Combine(
+                PidIpcEndpoint.IpcRootPath,
+                $"{prefix}-{Environment.ProcessId}-99999998-socket");
+            string validRouterPath = useRouterName
+                ? Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-99999995-socket")
+                : null;
+            try
+            {
+                if (validRouterPath is not null)
+                {
+                    File.CreateSymbolicLink(validRouterPath, PidIpcEndpoint.GetDefaultAddress(Environment.ProcessId));
+                }
+                File.WriteAllText(invalidPath, "");
+                File.SetLastWriteTimeUtc(invalidPath, DateTime.UtcNow.AddMinutes(1));
+
+                Assert.True(PidIpcEndpoint.TryResolveAddress(
+                    PidIpcEndpoint.IpcRootPath,
+                    Environment.ProcessId,
+                    out string resolvedAddress));
+                Assert.Equal(invalidPath, resolvedAddress);
+
+                DiagnosticsClient client = new(Environment.ProcessId);
+                ProcessInfo info = client.GetProcessInfo();
+                Assert.Equal((ulong)Environment.ProcessId, info.ProcessId);
+            }
+            finally
+            {
+                File.Delete(invalidPath);
+                if (validRouterPath is not null)
+                {
+                    File.Delete(validRouterPath);
+                }
+            }
+        }
+
+        [ConditionalFact(nameof(IsUnix))]
+        public void Connect_SkipsOverlongCandidate()
+        {
+            string overlongPath = Path.Combine(
+                PidIpcEndpoint.IpcRootPath,
+                $"dotnet-diagnostic-{Environment.ProcessId}-{new string('9', 120)}-socket");
+            File.WriteAllText(overlongPath, "");
+
+            try
+            {
+                Assert.True(PidIpcEndpoint.TryResolveAddress(
+                    PidIpcEndpoint.IpcRootPath,
+                    Environment.ProcessId,
+                    out string resolvedAddress));
+                Assert.Equal(overlongPath, resolvedAddress);
+
+                DiagnosticsClient client = new(Environment.ProcessId);
+                ProcessInfo info = client.GetProcessInfo();
+                Assert.Equal((ulong)Environment.ProcessId, info.ProcessId);
+            }
+            finally
+            {
+                File.Delete(overlongPath);
+            }
+        }
+
+        [ConditionalTheory(nameof(IsUnix))]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Connect_PreferredRouterUnavailable_DoesNotFallBackToRuntime(bool useAsync)
+        {
+            DiagnosticsClientApiShim client = new(new DiagnosticsClient(Environment.ProcessId), useAsync);
+            ProcessInfo baseline = await client.GetProcessInfo(TimeSpan.FromSeconds(5));
+            Assert.Equal((ulong)Environment.ProcessId, baseline.ProcessId);
+
+            string routerPath = Path.Combine(
+                PidIpcEndpoint.IpcRootPath,
+                $"dotnet-diagnostic-dsrouter-{Environment.ProcessId}-99999996-socket");
+            File.WriteAllText(routerPath, "");
+            try
+            {
+                File.SetLastWriteTimeUtc(routerPath, DateTime.UtcNow.AddMinutes(1));
+                Assert.True(PidIpcEndpoint.TryResolveAddress(
+                    PidIpcEndpoint.IpcRootPath,
+                    Environment.ProcessId,
+                    out string selectedAddress));
+                Assert.Equal(routerPath, selectedAddress);
+
+                await Assert.ThrowsAsync<ServerNotAvailableException>(async () => {
+                    ProcessInfo info = await client.GetProcessInfo(TimeSpan.FromSeconds(5));
+                    _output.WriteLine($"Unavailable router endpoint returned runtime ProcessInfo for PID {info.ProcessId}.");
+                });
+            }
+            finally
+            {
+                File.Delete(routerPath);
+            }
+
+            ProcessInfo recovered = await client.GetProcessInfo(TimeSpan.FromSeconds(5));
+            Assert.Equal((ulong)Environment.ProcessId, recovered.ProcessId);
+        }
+
+        [ConditionalFact(nameof(IsUnix))]
+        public async Task ConnectAsync_AlreadyCanceled_ThrowsOperationCanceled()
+        {
+            using CancellationTokenSource cancellation = new();
+            cancellation.Cancel();
+
+            PidIpcEndpoint endpoint = new(Environment.ProcessId);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => endpoint.ConnectAsync(cancellation.Token));
+        }
+
+        [Fact]
+        public void GetProcessInfo_CurrentProcess_ConnectsThroughDefaultEndpoint()
+        {
+            DiagnosticsClient client = new(Environment.ProcessId);
+            ProcessInfo info = client.GetProcessInfo();
+            Assert.Equal((ulong)Environment.ProcessId, info.ProcessId);
+            Assert.Contains(Environment.ProcessId, DiagnosticsClient.GetPublishedProcesses());
+        }
+
+        [ConditionalFact(nameof(IsLinux))]
+        public async Task GetPublishedProcesses_EmptyTargetTmpdir_FindsTarget()
+        {
+            TestConfiguration config = (TestConfiguration)SpoofConfigurations.First()[0];
+            DebuggeeConfiguration debuggee = await DebuggeeCompiler.Execute(config, "Tracee", _output);
+            bool useHost = !string.IsNullOrWhiteSpace(config.HostExe);
+            string executable = useHost ? config.HostExe : debuggee.BinaryExePath;
+            string arguments = useHost ? $"{config.HostArgs} \"{debuggee.BinaryExePath}\" unused-pipe" : "unused-pipe";
+            ProcessStartInfo psi = new(executable, arguments) { UseShellExecute = false };
+            psi.Environment["DOTNET_ROOT"] = config.DotNetRoot;
+            psi.Environment["TMPDIR"] = string.Empty;
+
+            using Process child = Process.Start(psi);
+            string socketPath = null;
+            try
+            {
+                bool found = false;
+                for (int attempt = 0; attempt < 100 && !found; attempt++)
+                {
+                    found = PidIpcEndpoint.TryResolveAddress("/tmp/", child.Id, out socketPath);
+                    if (!found)
+                    {
+                        await Task.Delay(100);
+                    }
+                }
+
+                Assert.True(found, "Target diagnostic socket was not created.");
+                Assert.Contains(child.Id, DiagnosticsClient.GetPublishedProcesses());
+                Assert.Equal((ulong)child.Id, new DiagnosticsClient(child.Id).GetProcessInfo().ProcessId);
+            }
+            finally
+            {
+                if (!child.HasExited)
+                {
+                    child.Kill();
+                    child.WaitForExit();
+                }
+                if (socketPath != null)
+                {
+                    File.Delete(socketPath);
+                }
+            }
+        }
+
+        [ConditionalFact(nameof(IsNotLinux))]
+        public void TryResolveAddress_Windows_NamedPipeAddressUnchanged()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Skip("Windows named pipes only.");
+            }
+            Assert.True(PidIpcEndpoint.TryResolveAddress(@"\\.\pipe\", Environment.ProcessId, out string address));
+            Assert.Equal($"dotnet-diagnostic-{Environment.ProcessId}", address);
+        }
+
+        private static string CreateSocketTestDirectory()
+        {
+            // Keep paths short enough for macOS's Unix socket path limit.
+            string directory = Path.Combine("/tmp", "ipc-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            Directory.CreateDirectory(directory);
+            return directory;
+        }
+
+        private static Socket BindSocket(string path)
+        {
+            Socket socket = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            try
+            {
+                socket.Bind(new UnixDomainSocketEndPoint(path));
+                return socket;
+            }
+            catch
+            {
+                socket.Dispose();
+                throw;
+            }
+        }
 
         #region Parsing tests (platform-independent, synthetic data)
 
@@ -114,7 +516,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             byte[] environ = Encoding.UTF8.GetBytes("PATH=/usr/bin\0HOME=/root\0");
             string result = PidIpcEndpoint.ParseTmpDir(environ);
-            Assert.Equal(Path.GetTempPath(), result);
+            Assert.Equal("/tmp/", result);
+        }
+
+        [Fact]
+        public void ParseTmpDir_EmptyTmpdir_ReturnsFallback()
+        {
+            byte[] environ = Encoding.UTF8.GetBytes("TMPDIR=\0");
+            string result = PidIpcEndpoint.ParseTmpDir(environ);
+            Assert.Equal("/tmp/", result);
         }
 
         [Fact]
@@ -122,7 +532,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             byte[] environ = new byte[0];
             string result = PidIpcEndpoint.ParseTmpDir(environ);
-            Assert.Equal(Path.GetTempPath(), result);
+            Assert.Equal("/tmp/", result);
         }
 
         #endregion
