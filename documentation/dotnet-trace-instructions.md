@@ -98,9 +98,11 @@ You can stop collecting the trace by pressing <kbd>Enter</kbd> or <kbd>Ctrl</kbd
 
 On Windows, `.nettrace` files can be viewed on PerfView (https://github.com/microsoft/perfview) for analysis, just like traces collected with ETW or LTTng. For traces collected on Linux, you can either move the trace to a Windows machine to be viewed on PerfView.
 
-If you would rather view the trace on a Linux machine, you can do this by changing the output format of `dotnet-trace` to `speedscope`. You can change the output file format using the `-f|--format` option - `-f speedscope` will make `dotnet-trace` to produce a speedscope file. You can currently choose between `nettrace` (the default option) and `speedscope`. Speedscope files can be opened at https://www.speedscope.app.
+If you would rather view the trace on a Linux machine, you can do this by changing the output format of `dotnet-trace` to `speedscope`. You can change the output file format using the `-f|--format` option - `-f speedscope` will make `dotnet-trace` to produce a speedscope file. You can currently choose between `nettrace` (the default option), `speedscope`, `chromium`, and `callgrind`. Speedscope files can be opened at https://www.speedscope.app. Chromium files can be opened in the Performance tab of Chromium-based browser developer tools. Callgrind files (`*.callgrind.out`) can be opened with [KCachegrind/QCachegrind](https://kcachegrind.github.io) or summarized with `callgrind_annotate`.
 
-Note: The .NET Core runtime generates traces in the `nettrace` format, and are converted to speedscope (if specified) after the trace is completed. Since some conversions may result in loss of data, the original `nettrace` file is preserved next to the converted file.
+An existing `nettrace` file can also be converted afterwards, for example `dotnet-trace convert trace.nettrace --format callgrind`.
+
+Note: The .NET Core runtime generates traces in the `nettrace` format, and are converted to the requested format (if specified) after the trace is completed. Since some conversions may result in loss of data, the original `nettrace` file is preserved next to the converted file.
 
 ## Known Caveats
 
@@ -279,7 +281,7 @@ Options:
     Sets the size of the in-memory circular buffer in megabytes. Default 256 MB.
 
   -f, --format
-    The format of the output trace file.  This defaults to "nettrace" on Windows and "speedscope" on other OSes.
+    The format of the output trace file: NetTrace, Speedscope, Chromium, or Callgrind. Defaults to NetTrace. For other formats, the nettrace file is kept and a converted file is written next to it.
 
   -- <command> (for target applications running .NET 5.0 or later only)
     The command to run to launch a child process and trace from startup.
