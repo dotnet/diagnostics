@@ -19,15 +19,16 @@ namespace Microsoft.Diagnostics.DataContractReader.Contracts.StackWalkHelpers;
 /// <c>InterpreterFrame.TopInterpMethodContextFrame</c> -&gt; <c>InterpMethodContextFrame.pParent</c>
 /// chain. A real stack is a mix of the two.
 ///
-/// The instruction/stack/frame pointer slots are 32-bit (wasm32): <see cref="StackPointer"/> is
-/// the managed linear stack pointer and <see cref="InstructionPointer"/> is the current virtual IP.
-/// <see cref="Unwind"/> advances the context by one ReadyToRun frame.
+/// The instruction/stack/frame pointer slots are 32-bit (wasm32; <see cref="Wasm64Context"/> is the
+/// wasm64 layout): <see cref="StackPointer"/> is the managed linear stack pointer and
+/// <see cref="InstructionPointer"/> is the current virtual IP. <see cref="Unwind"/> advances the
+/// context by one ReadyToRun frame.
 /// </remarks>
 [StructLayout(LayoutKind.Sequential)]
 internal struct WasmContext : IPlatformContext
 {
     // Field order and size mirror the native wasm T_CONTEXT (src/coreclr/pal/inc/pal.h,
-    // HOST_WASM branch) so that a serialized WasmContext is byte-compatible with the
+    // HOST_WASMARCH branch) so that a serialized WasmContext is byte-compatible with the
     // runtime's context blob:
     //   ContextFlags @0, InterpreterWalkFramePointer @4, InterpreterSP @8,
     //   InterpreterFP @12, InterpreterIP @16  (20 bytes, all 32-bit / wasm32).
@@ -83,31 +84,7 @@ internal struct WasmContext : IPlatformContext
         Unwind(unwinder);
     }
 
-    internal void Unwind(Wasm.WasmUnwinder unwinder)
-    {
-        // Advance one ReadyToRun frame over the managed linear stack. When the caller is not R2R
-        // code (an interpreter transition, native code above a reverse P/Invoke, or the stack top),
-        // StackPointer is the caller's SP and the IP and FP are null; the walker continues through
-        // the explicit Frame chain / interpreter frame chain.
-        TargetPointer sp = StackPointer;
-        if (unwinder.TryUnwindOneFrame(ref sp, InstructionPointer, out TargetCodePointer ip))
-        {
-            StackPointer = sp;
-            InstructionPointer = ip;
-            // Native WasmUnwindStackFrame recomputes the caller's frame pointer from its stack pointer;
-            // funclets report the establishing method's frame base (GetWasmFramePointerFromStackPointer).
-            FramePointer = ip != TargetCodePointer.Null
-                && unwinder.TryGetLogicalFramePointer(sp, out TargetPointer fp)
-                    ? fp
-                    : TargetPointer.Null;
-        }
-        else
-        {
-            StackPointer = TargetPointer.Null;
-            InstructionPointer = TargetCodePointer.Null;
-            FramePointer = TargetPointer.Null;
-        }
-    }
+    internal void Unwind(Wasm.WasmUnwinder unwinder) => unwinder.UnwindContext(ref this);
 
     // WASM has no hardware single-step flag; like other architectures without one (ARM, LoongArch64,
     // RISC-V) this is a no-op. Callers (e.g. Debugger_1.PrepareExceptionHijack) invoke it

@@ -10,15 +10,19 @@
 extern "C" {
 #endif
 
-// Returns the OS page size in bytes.
-//
-// On platforms where the page size is fixed (Windows: 4KB, WASM: 16KB) this is
-// defined inline so callers see a compile-time constant. This matters for the GC,
-// which expects GetPageSize to fold into a constant for alignment math.
-//
-// On other platforms the value is queried from the OS once and cached; the
-// definition lives in ospagesize.c so there is exactly one cache per process.
-#if defined(HOST_WASM)
+/**
+ * Get the OS page size.
+ *
+ * On platforms where the page size is fixed (Windows: 4KB, WASM: 16KB) this is
+ * defined inline so callers see a compile-time constant. This matters for the GC,
+ * which expects GetPageSize to fold into a constant for alignment math.
+ *
+ * On other platforms the value is queried from the OS once and cached; the
+ * definition lives in ospagesize.c so there is exactly one cache per process.
+ *
+ * @return The page size in bytes.
+ */
+#if defined(HOST_WASMARCH)
 inline uint32_t minipal_getpagesize(void)
 {
     // WASM has no hardware pages; getpagesize() returns the 64KB memory.grow granularity,
