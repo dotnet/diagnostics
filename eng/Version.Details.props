@@ -15,17 +15,17 @@ This file should be imported by eng/Versions.props
     <!-- dotnet-command-line-api dependencies -->
     <SystemCommandLinePackageVersion>2.0.0-beta5.25210.1</SystemCommandLinePackageVersion>
     <!-- dotnet-dotnet dependencies -->
-    <MicrosoftAspNetCoreAppRefPackageVersion>12.0.0-alpha.1.26575.112</MicrosoftAspNetCoreAppRefPackageVersion>
-    <MicrosoftAspNetCoreAppRefInternalPackageVersion>12.0.0-alpha.1.26575.112</MicrosoftAspNetCoreAppRefInternalPackageVersion>
-    <MicrosoftCodeAnalysisPackageVersion>5.14.0-1.26575.112</MicrosoftCodeAnalysisPackageVersion>
-    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.14.0-1.26575.112</MicrosoftCodeAnalysisAnalyzersPackageVersion>
-    <MicrosoftCodeAnalysisCSharpPackageVersion>5.14.0-1.26575.112</MicrosoftCodeAnalysisCSharpPackageVersion>
-    <MicrosoftCodeAnalysisCSharpWorkspacesPackageVersion>5.14.0-1.26575.112</MicrosoftCodeAnalysisCSharpWorkspacesPackageVersion>
-    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>12.0.100-alpha.1.26575.112</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
-    <MicrosoftCodeAnalysisWorkspacesMSBuildPackageVersion>5.14.0-1.26575.112</MicrosoftCodeAnalysisWorkspacesMSBuildPackageVersion>
-    <MicrosoftNETSdkPackageVersion>12.0.100-alpha.1.26575.112</MicrosoftNETSdkPackageVersion>
-    <MicrosoftNETCoreAppRefPackageVersion>12.0.0-alpha.1.26575.112</MicrosoftNETCoreAppRefPackageVersion>
-    <MicrosoftNETCorePlatformsPackageVersion>12.0.0-alpha.1.26575.112</MicrosoftNETCorePlatformsPackageVersion>
+    <MicrosoftAspNetCoreAppRefPackageVersion>12.0.0-alpha.1.26577.105</MicrosoftAspNetCoreAppRefPackageVersion>
+    <MicrosoftAspNetCoreAppRefInternalPackageVersion>12.0.0-alpha.1.26577.105</MicrosoftAspNetCoreAppRefInternalPackageVersion>
+    <MicrosoftCodeAnalysisPackageVersion>5.15.0-1.26577.105</MicrosoftCodeAnalysisPackageVersion>
+    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.15.0-1.26577.105</MicrosoftCodeAnalysisAnalyzersPackageVersion>
+    <MicrosoftCodeAnalysisCSharpPackageVersion>5.15.0-1.26577.105</MicrosoftCodeAnalysisCSharpPackageVersion>
+    <MicrosoftCodeAnalysisCSharpWorkspacesPackageVersion>5.15.0-1.26577.105</MicrosoftCodeAnalysisCSharpWorkspacesPackageVersion>
+    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>12.0.100-alpha.1.26577.105</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
+    <MicrosoftCodeAnalysisWorkspacesMSBuildPackageVersion>5.15.0-1.26577.105</MicrosoftCodeAnalysisWorkspacesMSBuildPackageVersion>
+    <MicrosoftNETSdkPackageVersion>12.0.100-alpha.1.26577.105</MicrosoftNETSdkPackageVersion>
+    <MicrosoftNETCoreAppRefPackageVersion>12.0.0-alpha.1.26577.105</MicrosoftNETCoreAppRefPackageVersion>
+    <MicrosoftNETCorePlatformsPackageVersion>12.0.0-alpha.1.26577.105</MicrosoftNETCorePlatformsPackageVersion>
     <!-- microsoft-clrmd dependencies -->
     <MicrosoftDiagnosticsRuntimePackageVersion>4.2.756901</MicrosoftDiagnosticsRuntimePackageVersion>
     <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.2.756901</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
